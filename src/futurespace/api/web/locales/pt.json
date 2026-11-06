@@ -51,7 +51,7 @@
     "tile_ia": "IA: próximo bloco",
     "tile_noaa": "NOAA: próximo bloco",
     "chart_title": "Kp de 3 em 3 horas: ontem, hoje e amanhã",
-    "chart_hint": "Cada um aparece com a última previsão que fez antes de o bloco começar. Horários em UTC (Brasília = UTC−3). <a href=\"{{url:sobre}}#formulas\">Ver as fórmulas</a>.",
+    "chart_hint": "Cada um aparece com a última previsão que fez antes de o bloco começar. Horários em UTC (Brasília = UTC−3). A IA prevê 3, 6, 12 e 24 h à frente, então alguns blocos ainda podem estar sem bolinha azul (<a href=\"{{url:sobre}}#horizons\">entenda</a>). <a href=\"{{url:sobre}}#formulas\">Ver as fórmulas</a>.",
     "legend_observed": "O que aconteceu",
     "legend_ia": "IA Future Space",
     "legend_noaa": "NOAA",
@@ -153,7 +153,13 @@
     "m_winner": "vencedor",
     "m_ia": "IA",
     "m_num_au": "1,496",
-    "m_kp_storm": "4,67"
+    "m_kp_storm": "4,67",
+    "horizon_title": "Para quando a IA prevê?",
+    "horizon_p1": "A cada hora, a IA olha os dados mais recentes e faz previsões para <b>pontos fixos no futuro</b>:",
+    "horizon_kp": "<b>Kp:</b> daqui a 3, 6, 12 e 24 horas (o bloco de 3 h que contém cada um desses momentos)",
+    "horizon_dst": "<b>Dst:</b> daqui a 1, 3, 6, 12 e 24 horas",
+    "horizon_p2": "Os blocos entre esses pontos são cobertos pelas previsões feitas em horas anteriores: o bloco de daqui a 18 h, por exemplo, foi o \"+24 h\" de uma previsão feita 6 horas atrás. No painel, cada bloco mostra a <b>última previsão feita antes de ele começar</b>, venha de qual horizonte vier.",
+    "horizon_p3": "Por isso, um bloco pode aparecer sem previsão da IA quando nenhuma previsão anterior chegou até ele, por exemplo logo depois de a IA entrar no ar ou se alguma coleta falhar. Com a IA rodando de hora em hora, todos os blocos das próximas 24 horas acabam cobertos."
   },
   "interativo": {
     "title": "Em breve!",

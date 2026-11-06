@@ -51,7 +51,7 @@
     "tile_ia": "AI: next block",
     "tile_noaa": "NOAA: next block",
     "chart_title": "Kp every 3 hours: yesterday, today and tomorrow",
-    "chart_hint": "Each one shows the last forecast it made before the block started. Times in UTC. <a href=\"{{url:sobre}}#formulas\">See the formulas</a>.",
+    "chart_hint": "Each one shows the last forecast it made before the block started. Times in UTC. The AI forecasts 3, 6, 12 and 24 h ahead, so some blocks may still have no blue dot (<a href=\"{{url:sobre}}#horizons\">why</a>). <a href=\"{{url:sobre}}#formulas\">See the formulas</a>.",
     "legend_observed": "What happened",
     "legend_ia": "Future Space AI",
     "legend_noaa": "NOAA",
@@ -153,7 +153,13 @@
     "m_winner": "winner",
     "m_ia": "AI",
     "m_num_au": "1.496",
-    "m_kp_storm": "4.67"
+    "m_kp_storm": "4.67",
+    "horizon_title": "How far ahead does the AI forecast?",
+    "horizon_p1": "Every hour, the AI looks at the latest data and makes forecasts for <b>fixed points in the future</b>:",
+    "horizon_kp": "<b>Kp:</b> 3, 6, 12 and 24 hours ahead (the 3-hour block that contains each of those moments)",
+    "horizon_dst": "<b>Dst:</b> 1, 3, 6, 12 and 24 hours ahead",
+    "horizon_p2": "The blocks in between are covered by forecasts made in earlier hours: the block 18 h from now, for example, was the \"+24 h\" of a forecast made 6 hours ago. On the dashboard, each block shows the <b>last forecast made before it started</b>, whatever horizon it came from.",
+    "horizon_p3": "That's why a block can show no AI forecast when no earlier forecast reached it yet, for example right after the AI went live or if a data run failed. With the AI running every hour, all blocks in the next 24 hours end up covered."
   },
   "interativo": {
     "title": "Coming soon!",

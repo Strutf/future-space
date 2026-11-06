@@ -4,6 +4,9 @@
   .intro p { color: var(--chalk-soft); font-size: 21px; max-width: 640px; margin: 12px auto 0; }
   .explain { margin-top: 40px; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
   @media (max-width: 600px) { .explain { grid-template-columns: 1fr; } }
+  .explain .wide { grid-column: 1 / -1; }
+  .horizons { margin: 0 0 10px; padding-left: 22px; }
+  .horizons li { margin-bottom: 4px; }
   .explain .box p { margin: 0 0 8px; }
   .explain .box h2 { display: flex; align-items: center; gap: 10px; }
   .story { margin-top: 48px; }
@@ -75,6 +78,16 @@
     <h2 class="chalk-text">{{t:sobre.ai_title}}</h2>
     <p>{{t:sobre.ai_p1}}</p>
     <p class="muted">{{t:sobre.ai_p2}}</p>
+  </div>
+  <div class="box yellow wide" id="horizons">
+    <h2 class="chalk-text">{{t:sobre.horizon_title}}</h2>
+    <p>{{t:sobre.horizon_p1}}</p>
+    <ul class="horizons">
+      <li>{{t:sobre.horizon_kp}}</li>
+      <li>{{t:sobre.horizon_dst}}</li>
+    </ul>
+    <p>{{t:sobre.horizon_p2}}</p>
+    <p class="muted">{{t:sobre.horizon_p3}}</p>
   </div>
 </section>
 
