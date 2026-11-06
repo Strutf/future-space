@@ -1,0 +1,115 @@
+<style>
+  .hero { position: relative; text-align: center; padding: 64px 0 40px; }
+  .hero h1 {
+    font-size: clamp(56px, 12vw, 128px); line-height: 1; transform: rotate(-2deg);
+    color: var(--chalk); text-shadow: 0 0 1px rgba(255, 255, 255, 0.6);
+  }
+  .hero .tagline { font-size: 24px; color: var(--chalk-soft); margin: 18px auto 0; max-width: 620px; }
+  .hero .deco { position: absolute; color: var(--chalk-yellow); }
+  .hero .deco svg { width: 100%; height: 100%; }
+  .now {
+    display: inline-flex; align-items: center; gap: 12px; margin: 28px auto 0;
+    max-width: 640px; text-align: left;
+  }
+  .now .bubble { font-size: 21px; }
+  .now .bubble b { font-family: var(--marker); font-weight: 400; }
+  .cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+  .cards { margin-top: 64px; }
+  .cards .box p { margin: 0 0 10px; }
+  .steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; }
+  .steps li { position: relative; padding-left: 40px; margin-bottom: 12px; counter-increment: s; }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: -2px; width: 28px; height: 28px;
+    font-family: var(--marker); color: var(--board); background: var(--chalk-yellow);
+    border-radius: 50% 45% 55% 48%; display: grid; place-items: center; font-size: 16px;
+  }
+  .stage { display: flex; align-items: center; gap: 14px; margin: 14px 0 0; }
+  .stage p { margin: 0; }
+  @media (max-width: 600px) { .hero { padding-top: 40px; } .hero .deco { display: none; } }
+</style>
+
+<section class="hero">
+  <span class="deco" style="left:8%;top:36%;width:54px;height:54px;transform:rotate(-14deg)">
+    <svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9.2 L22 9.4 L16 14 L18.4 21.4 L12 16.9 L5.6 21.6 L8 14.1 L2 9.5 L9.4 9.1 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" filter="url(#wobble)"/></svg>
+  </span>
+  <span class="deco" style="right:9%;top:6%;width:46px;height:46px;color:var(--chalk);transform:rotate(12deg)">
+    <svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9.2 L22 9.4 L16 14 L18.4 21.4 L12 16.9 L5.6 21.6 L8 14.1 L2 9.5 L9.4 9.1 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" filter="url(#wobble)"/></svg>
+  </span>
+  <span class="deco" style="right:5%;top:62%;width:60px;height:60px;color:var(--chalk-pink);transform:rotate(-6deg)">
+    <svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9.2 L22 9.4 L16 14 L18.4 21.4 L12 16.9 L5.6 21.6 L8 14.1 L2 9.5 L9.4 9.1 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" filter="url(#wobble)"/></svg>
+  </span>
+
+  <h1 class="chalk-text">Future Space</h1>
+  <p class="tagline">Uma inteligência artificial que fica de olho no Sol e avisa quando vem tempestade no espaço.</p>
+
+  <div class="now box yellow" id="now">
+    <svg class="doodle wiggle" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="13" stroke="var(--chalk-yellow)" filter="url(#wobble)"/>
+      <g stroke="var(--chalk-yellow)" filter="url(#wobble)">
+        <path d="M32 6v8M32 50v8M6 32h8M50 32h8M13 13l6 6M45 45l6 6M13 51l6-6M45 19l6-6"/>
+      </g>
+      <path d="M26 30h1M37 30h1M26 37q6 5 12 0" stroke="var(--chalk-yellow)"/>
+    </svg>
+    <div class="bubble" id="now-text">Perguntando para a IA como está o espaço…</div>
+  </div>
+
+  <div class="cta">
+    <a class="chalk-btn" href="/dashboard">Ver as previsões</a>
+    <a class="chalk-btn ghost" href="/sobre">Como funciona?</a>
+  </div>
+</section>
+
+<section class="cards grid-2">
+  <div class="box">
+    <h2 class="chalk-text">O que nós fazemos</h2>
+    <p>A gente vigia o Sol e o espaço em volta da Terra. Juntamos dados de satélites, sondas e
+      observatórios do mundo todo, e uma IA usa tudo isso para prever <b>tempestades geomagnéticas</b>.</p>
+    <p class="muted">São elas que acendem as auroras, bagunçam o GPS e podem atrapalhar satélites e redes de energia.</p>
+    <div class="stage">
+      <svg class="doodle" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="22" cy="32" r="12" stroke="var(--chalk-yellow)" filter="url(#wobble)"/>
+        <path d="M38 26q8 6 0 12M44 22q12 10 0 20M50 18q16 14 0 28" stroke="var(--chalk-orange)" filter="url(#wobble)"/>
+      </svg>
+      <p>O Sol solta rajadas de partículas e campo magnético…</p>
+    </div>
+    <div class="stage">
+      <svg class="doodle" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="14" stroke="var(--chalk-blue)" filter="url(#wobble)"/>
+        <path d="M24 26q5-4 9 0t6 6M22 36q6 2 10 6" stroke="var(--chalk-green)" filter="url(#wobble)"/>
+        <path d="M14 16q18-10 36 0M12 48q20 12 40 0" stroke="var(--chalk-pink)" filter="url(#wobble)"/>
+      </svg>
+      <p>…que chegam à Terra em horas ou dias. A gente tenta avisar antes.</p>
+    </div>
+  </div>
+
+  <div class="box blue">
+    <h2 class="chalk-text">De que forma</h2>
+    <ol class="steps">
+      <li>De hora em hora, buscamos dados de <b>12 fontes abertas</b> (NOAA, NASA, GFZ, Kyoto e SIDC).</li>
+      <li>Uma IA treinada com <b>30 anos</b> de história olha o vento solar, as explosões do Sol e o "humor" do campo magnético da Terra.</li>
+      <li>Ela prevê os índices <b>Kp</b> e <b>Dst</b> para as próximas 24 horas, com a chance de tempestade.</li>
+      <li>Todo dia comparamos com a previsão oficial da <b>NOAA</b> para ver quem chegou mais perto.</li>
+    </ol>
+    <p class="muted small">Tudo é aberto: os dados, o código e a API.</p>
+  </div>
+</section>
+
+<script>
+  (async () => {
+    const latest = await getJson("/v1/datasets/predictions/latest").catch(() => null);
+    const el = document.getElementById("now-text");
+    if (!latest || !latest.data.length) {
+      el.textContent = "A IA ainda está esquentando os motores. Volte daqui a pouco!";
+      return;
+    }
+    const kp = latest.data.filter((r) => r.target === "kp");
+    const p = Math.max(...kp.map((r) => r.storm_probability));
+    const alert = kp.some((r) => r.storm_alert);
+    const pct = Math.round(100 * p);
+    el.innerHTML = alert
+      ? `<b>Atenção!</b> A IA acha que pode vir tempestade nas próximas 24 h (${pct}% de chance).`
+      : p >= 0.15
+        ? `<b>Fique de olho:</b> o espaço está agitado. Chance de tempestade em 24 h: ${pct}%.`
+        : `<b>Tudo calmo no espaço.</b> Chance de tempestade nas próximas 24 h: ${pct}%.`;
+  })();
+</script>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="Previsões de tempestades geomagnéticas feitas por IA, de hora em hora, com dados abertos de satélites e observatórios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&display=swap">
+<link rel="stylesheet" href="/static/chalk.css">
+<!-- Carregado antes do conteúdo: os scripts de cada página usam fmt() e getJson() daqui. -->
+<script src="/static/chalk.js"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2318202b'/%3E%3Cpath d='M12 3 L14.4 9.4 L21 9.6 L15.8 13.6 L17.8 20.2 L12 16.3 L6.2 20.3 L8.2 13.7 L3 9.7 L9.6 9.3 Z' fill='none' stroke='%23ffd76a' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body data-page="{{page}}">
+<!-- Filtros de giz: "chalk" dá textura granulada ao traço, "wobble" faz as linhas tremerem como desenho à mão. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="chalk" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="grain"/>
+    <feDisplacementMap in="SourceGraphic" in2="grain" scale="3" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feComponentTransfer in="grain" result="holes"><feFuncA type="discrete" tableValues="1 1 1 0.55"/></feComponentTransfer>
+    <feComposite in="rough" in2="holes" operator="in"/>
+  </filter>
+  <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<div class="sky" aria-hidden="true"></div>
+<div class="page">
+  <nav class="nav" aria-label="Menu principal">
+    <a href="/" data-page="home">Home</a>
+    <a href="/dashboard" data-page="dashboard">Previsões</a>
+    <a href="/sobre" data-page="sobre">Sobre as previsões</a>
+    <a href="/interativo" data-page="interativo">Interativo</a>
+  </nav>
+  {{content}}
+  <footer class="footer">
+    Previsões experimentais, feitas para aprender e acompanhar. Para decisões sérias, consulte a
+    <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a>.<br>
+    <a href="/docs">API aberta</a> ·
+    <a href="https://huggingface.co/datasets/Strutf/future-space" rel="noopener">Dados</a> ·
+    <a href="https://github.com/Strutf/future-space" rel="noopener">Código</a>
+  </footer>
+</div>
+</body>
+</html>

@@ -108,13 +108,25 @@ def test_storage_outage_returns_503_without_internal_details():
     assert "exemplo.invalid" not in resp.text
 
 
-def test_dashboard_and_root_redirect(client):
-    resp = client.get("/", follow_redirects=False)
-    assert resp.status_code in (302, 307)
-    assert resp.headers["location"] == "/dashboard"
-    page = client.get("/dashboard")
+@pytest.mark.parametrize("path, marker", [
+    ("/", "O que nós fazemos"),
+    ("/dashboard", "/v1/compare/kp"),
+    ("/sobre", "As fórmulas"),
+    ("/interativo", "Em breve"),
+])
+def test_site_pages(client, path, marker):
+    page = client.get(path)
     assert page.status_code == 200
-    assert "/v1/compare/kp" in page.text
+    assert marker in page.text
+    assert 'href="/static/chalk.css"' in page.text
+    assert "{{" not in page.text  # o molde foi todo preenchido
+
+
+def test_static_files_and_traversal(client):
+    css = client.get("/static/chalk.css")
+    assert css.status_code == 200 and css.headers["content-type"].startswith("text/css")
+    assert client.get("/static/..%2Fbase.html").status_code == 404
+    assert client.get("/static/nada.js").status_code == 404
 
 
 def test_compare_endpoint_without_predictions(client):

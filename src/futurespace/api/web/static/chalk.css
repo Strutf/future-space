@@ -1,0 +1,122 @@
+/* Future Space: tema quadro-negro, com traço de giz e cara de desenho de criança. */
+
+:root {
+  color-scheme: dark;
+  --board: #18202b;
+  --board-deep: #111821;
+  --chalk: #f1efe7;
+  --chalk-soft: #c9ccd2;
+  --chalk-muted: #9aa2ad;
+  --chalk-line: rgba(241, 239, 231, 0.22);
+  --chalk-yellow: #ffd76a;
+  --chalk-pink: #ff9fc6;
+  --chalk-blue: #8fc3ff;
+  --chalk-green: #9be3b0;
+  --chalk-orange: #ffb37a;
+  /* Séries do gráfico (paleta validada contra o fundo da lousa) */
+  --series-ia: #3987e5;
+  --series-noaa: #d95926;
+  --series-observed: #199e70;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --hand: "Patrick Hand", "Comic Sans MS", system-ui, sans-serif;
+  --marker: "Permanent Marker", "Patrick Hand", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--board); }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--chalk);
+  font: 19px/1.5 var(--hand);
+  background-color: var(--board);
+  /* pó de giz espalhado + bordas mais escuras, como uma lousa de verdade */
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.45), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+a { color: var(--chalk-yellow); text-underline-offset: 3px; }
+
+.page { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 16px 56px; }
+
+/* Céu de estrelinhas desenhadas */
+.sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.star { position: absolute; color: var(--chalk); opacity: 0.75; animation: twinkle 3.2s ease-in-out infinite; }
+.star svg { display: block; width: 100%; height: 100%; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.8; transform: rotate(var(--r, 0deg)) scale(1); }
+  50% { opacity: 0.35; transform: rotate(calc(var(--r, 0deg) + 8deg)) scale(0.88); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .star, .wiggle { animation: none !important; }
+}
+
+/* Menu escrito à mão */
+.nav {
+  display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center;
+  gap: 8px 24px; font-size: 24px; padding: 8px 0 4px;
+}
+.nav a { color: var(--chalk); text-decoration: none; padding: 2px 6px; position: relative; }
+.nav a:hover { color: var(--chalk-yellow); }
+.nav a[aria-current="page"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 10px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M2 6 Q 20 1 38 6 T 70 5 T 98 4' fill='none' stroke='%23ffd76a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+
+/* Textos */
+h1, h2, h3 { font-family: var(--marker); font-weight: 400; letter-spacing: 0.5px; margin: 0; }
+.chalk-text { filter: url(#chalk); }
+.muted { color: var(--chalk-muted); }
+.small { font-size: 16px; }
+
+/* Caixa desenhada à mão: a borda tremida fica num pseudo-elemento, o texto continua nítido */
+/* Fundo da cor da lousa: as estrelinhas do céu passam por trás das caixas, nunca por cima do texto */
+.box {
+  position: relative; padding: 22px 24px;
+  background: rgba(24, 32, 43, 0.92);
+  border-radius: 18px 225px 12px 255px / 255px 12px 225px 18px;
+}
+.box::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  border: 2.5px solid rgba(241, 239, 231, 0.85);
+  border-radius: 18px 225px 12px 255px / 255px 12px 225px 18px;
+  filter: url(#wobble);
+}
+.box.yellow::before { border-color: var(--chalk-yellow); }
+.box.pink::before { border-color: var(--chalk-pink); }
+.box.blue::before { border-color: var(--chalk-blue); }
+.box.green::before { border-color: var(--chalk-green); }
+.box h2 { font-size: 26px; margin-bottom: 10px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+
+/* Botão de giz */
+.chalk-btn {
+  display: inline-block; font-family: var(--marker); font-size: 20px; color: var(--board);
+  background: var(--chalk-yellow); padding: 8px 20px; text-decoration: none;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; transform: rotate(-1.5deg);
+}
+.chalk-btn:hover { transform: rotate(1deg) scale(1.03); }
+.chalk-btn.ghost { background: transparent; color: var(--chalk); border: 2px solid var(--chalk); }
+
+/* Rabiscos (ícones de giz) */
+.doodle { width: 56px; height: 56px; flex: none; }
+.doodle * { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.wiggle { animation: wiggle 4s ease-in-out infinite; transform-origin: center; }
+@keyframes wiggle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+.footer { margin-top: 48px; font-size: 16px; color: var(--chalk-muted); text-align: center; }
+.footer a { color: var(--chalk-soft); }
+
+@media (max-width: 600px) {
+  body { font-size: 18px; }
+  .nav { font-size: 20px; justify-content: center; }
+  .box { padding: 18px 16px; }
+}

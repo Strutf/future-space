@@ -241,7 +241,7 @@ Documentação interativa (Swagger) em `/docs`.
 | `GET /v1/datasets/predictions/latest` | Previsões mais recentes da IA |
 | `GET /v1/compare/kp?date=AAAA-MM-DD` | IA × NOAA × observado, bloco a bloco (dia e anterior) |
 | `GET /v1/verification/summary` | Erros das previsões nos últimos 7 e 30 dias |
-| `GET /dashboard` | Painel web de acompanhamento |
+| `GET /`, `/dashboard`, `/sobre`, `/interativo` | Páginas do site |
 
 Parâmetros de `/data`:
 - `start`, `end`: ISO 8601 em UTC (`2024-05-10` ou `2024-05-10T18:00Z`). Sem eles, a
@@ -466,15 +466,21 @@ futurespace train --no-cme --out models-sem-cme      # mesmo treino sem CMEs, pa
 `models/current.json` aponta para a versão em uso. Para voltar atrás, aponte-o para a
 versão anterior, que continua guardada em `models/<versão>/`.
 
-### Dashboard
+### Site
 
-Em [`/dashboard`](https://future-space-six.vercel.app/dashboard) (a raiz do site redireciona
-para ele):
-- o Kp previsto pela IA e pela NOAA para ontem e hoje, bloco a bloco, com o observado;
-- quem chegou mais perto ontem e se alguém previu tempestade;
-- todas as fórmulas usadas.
+O site fica em https://future-space-six.vercel.app, com visual de quadro-negro e desenhos em
+giz. Ele é servido pela própria API, sem build: as páginas ficam em
+`src/futurespace/api/web/pages`, encaixadas no molde `web/base.html`, e o tema está em
+`web/static/chalk.css`.
 
-Os dados vêm de `GET /v1/compare/kp`.
+| Página | O que mostra |
+|---|---|
+| `/` | Home: o que o projeto faz, como funciona e a previsão do momento |
+| `/dashboard` | Kp previsto pela IA e pela NOAA para ontem e hoje, bloco a bloco, com o observado e quem chegou mais perto |
+| `/sobre` | Explicações (Kp, Dst, CME, como a IA aprende) e todas as fórmulas |
+| `/interativo` | Em breve |
+
+Os dados do painel vêm de `GET /v1/compare/kp`.
 
 ---
 

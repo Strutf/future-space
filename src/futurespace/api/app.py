@@ -20,7 +20,7 @@ from typing import Literal
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from futurespace import __version__, catalog
 from futurespace.api import compare
@@ -49,7 +49,25 @@ padronizados num formato comum: toda tabela tem uma coluna `time` em UTC.
 Cite sempre a fonte original indicada em `provider` e `license`.
 """
 
-DASHBOARD_HTML = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
+WEB = Path(__file__).parent / "web"
+STATIC = WEB / "static"
+
+# Páginas do site: cada uma é o miolo em web/pages, encaixado no molde web/base.html.
+PAGES = {
+    "/": ("home", "Future Space"),
+    "/dashboard": ("dashboard", "Previsões · Future Space"),
+    "/sobre": ("sobre", "Sobre as previsões · Future Space"),
+    "/interativo": ("interativo", "Interativo · Future Space"),
+}
+
+
+def _render_page(name: str, title: str) -> str:
+    base = (WEB / "base.html").read_text(encoding="utf-8")
+    content = (WEB / "pages" / f"{name}.html").read_text(encoding="utf-8")
+    return base.replace("{{title}}", title).replace("{{page}}", name).replace("{{content}}", content)
+
+
+RENDERED_PAGES = {path: _render_page(name, title) for path, (name, title) in PAGES.items()}
 
 # Datas aceitas nos filtros: cobre todo o histórico (Kp desde 1932) e evita estouros de calendário.
 MIN_TIME = datetime(1900, 1, 1, tzinfo=UTC)
@@ -207,9 +225,24 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
             raise HTTPException(400, f"'{name}' fora do intervalo aceito ({MIN_TIME.year} a {MAX_TIME.year})")
         return dt
 
-    @app.get("/", include_in_schema=False)
-    def root():
-        return RedirectResponse("/dashboard")
+    def page_route(html: str):
+        return lambda: HTMLResponse(html, headers=_cache_header(300))
+
+    for path, html in RENDERED_PAGES.items():
+        app.add_api_route(path, page_route(html), methods=["GET"], include_in_schema=False)
+
+    @app.get("/static/{name}", include_in_schema=False)
+    def static_file(name: str):
+        # Só arquivos que existem direto em web/static: nada de subpastas nem "..".
+        path = STATIC / name
+        if "/" in name or name.startswith(".") or not path.is_file():
+            raise HTTPException(404, "arquivo não encontrado")
+        media = {".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png"}
+        return Response(
+            path.read_bytes(),
+            media_type=media.get(path.suffix, "application/octet-stream"),
+            headers=_cache_header(3600),
+        )
 
     @app.get("/v1", include_in_schema=False)
     def info():
@@ -269,10 +302,6 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         lo, hi = format_time(start), format_time(end)
         parts = pool.map(lambda lbl: read_json(json_key(ds.id, lbl)) or [], labels)
         return [r for part in parts for r in part if lo <= r["time"] <= hi]
-
-    @app.get("/dashboard", include_in_schema=False)
-    def dashboard():
-        return HTMLResponse(DASHBOARD_HTML, headers=_cache_header(300))
 
     @app.get("/v1/compare/kp", summary="IA x NOAA: previsões de Kp de ontem e de hoje, com o observado")
     def compare_kp(
