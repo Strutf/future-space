@@ -117,6 +117,14 @@ def test_storage_outage_returns_503_without_internal_details():
     ("/en/dashboard", "/v1/compare/kp", "en"),
     ("/en/about", "How a solar storm happens", "en"),
     ("/en/interactive", "Coming soon", "en"),
+    ("/es", "Qué hacemos", "es"),
+    ("/es/dashboard", "/v1/compare/kp", "es"),
+    ("/es/acerca", "Cómo ocurre una tormenta solar", "es"),
+    ("/es/interactivo", "Muy pronto", "es"),
+    ("/fr", "Ce que nous faisons", "fr"),
+    ("/fr/dashboard", "/v1/compare/kp", "fr"),
+    ("/fr/a-propos", "Comment se forme une tempête solaire", "fr"),
+    ("/fr/interactif", "Bientôt", "fr"),
 ])
 def test_site_pages(client, path, marker, lang):
     page = client.get(path)
@@ -127,23 +135,22 @@ def test_site_pages(client, path, marker, lang):
     assert "{{" not in page.text  # molde e traduções todos preenchidos
 
 
-@pytest.mark.parametrize("path, pt, en, current", [
-    ("/sobre", "/sobre", "/en/about", "pt"),
-    ("/en/about", "/sobre", "/en/about", "en"),
-    ("/", "/", "/en", "pt"),
-])
-def test_language_menu_points_to_same_page(client, path, pt, en, current):
+@pytest.mark.parametrize("path, current", [("/sobre", "pt"), ("/en/about", "en"), ("/es/acerca", "es"), ("/fr/a-propos", "fr")])
+def test_language_menu_points_to_same_page(client, path, current):
     html = client.get(path).text
-    assert f'<a href="{pt}" lang="pt-BR" hreflang="pt-BR" data-lang="pt"' in html
-    assert f'<a href="{en}" lang="en" hreflang="en" data-lang="en"' in html
+    for lang, url, name in (("pt", "/sobre", "Português"), ("en", "/en/about", "English"),
+                            ("es", "/es/acerca", "Español"), ("fr", "/fr/a-propos", "Français")):
+        assert f'<a href="{url}"' in html and f'data-lang="{lang}"' in html and f">{name}</a>" in html
     assert html.count('aria-current="true"') == 1
     assert f'data-lang="{current}" role="listitem" aria-current="true"' in html
+    assert html.count('rel="alternate" hreflang=') == 5  # 4 idiomas + x-default
 
 
-def test_english_pages_have_no_portuguese_leftovers(client):
+def test_other_languages_have_no_portuguese_leftovers(client):
     import re
 
-    for path in ("/en", "/en/dashboard", "/en/about", "/en/interactive"):
+    for path in ("/en", "/en/dashboard", "/en/about", "/en/interactive",
+                 "/es", "/es/dashboard", "/es/acerca", "/fr", "/fr/dashboard", "/fr/a-propos"):
         text = client.get(path).text.lower()
         # Comentários de código/HTML não aparecem para o visitante e seguem o idioma do repositório.
         text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)

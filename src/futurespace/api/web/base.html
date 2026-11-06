@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="{{t:lang}}" data-lang="{{lang}}" data-alt-lang="{{alt_lang}}" data-alt-url="{{alt_url}}">
+<html lang="{{t:lang}}" data-lang="{{lang}}" data-urls="{{page_urls}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{title}}</title>
 <meta name="description" content="{{t:meta.description}}">
-<link rel="alternate" hreflang="pt-BR" href="{{href_pt}}">
-<link rel="alternate" hreflang="en" href="{{href_en}}">
+{{hreflang_links}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&display=swap">
@@ -47,8 +46,7 @@
         <svg class="caret" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 Q6 7 11 1.5"/></svg>
       </summary>
       <div class="lang-list" role="list">
-        <a href="{{path_pt}}" lang="pt-BR" hreflang="pt-BR" data-lang="pt" role="listitem" {{current_pt}}>Português</a>
-        <a href="{{path_en}}" lang="en" hreflang="en" data-lang="en" role="listitem" {{current_en}}>English</a>
+        {{language_menu}}
       </div>
     </details>
   </nav>

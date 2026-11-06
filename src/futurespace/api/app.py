@@ -61,12 +61,12 @@ STATIC_VERSIONS = {
 
 # Páginas do site: cada uma é o miolo em web/pages, encaixado no molde web/base.html, com os
 # textos vindos de web/locales/<idioma>.json. Cada idioma tem os próprios endereços.
-LANGS = ("pt", "en")
+LANGS = ("pt", "en", "es", "fr")
 PAGE_URLS = {
-    "home": {"pt": "/", "en": "/en"},
-    "dashboard": {"pt": "/dashboard", "en": "/en/dashboard"},
-    "sobre": {"pt": "/sobre", "en": "/en/about"},
-    "interativo": {"pt": "/interativo", "en": "/en/interactive"},
+    "home": {"pt": "/", "en": "/en", "es": "/es", "fr": "/fr"},
+    "dashboard": {"pt": "/dashboard", "en": "/en/dashboard", "es": "/es/dashboard", "fr": "/fr/dashboard"},
+    "sobre": {"pt": "/sobre", "en": "/en/about", "es": "/es/acerca", "fr": "/fr/a-propos"},
+    "interativo": {"pt": "/interativo", "en": "/en/interactive", "es": "/es/interactivo", "fr": "/fr/interactif"},
 }
 SITE_URL = "https://future-space-six.vercel.app"
 LOCALES = {lang: json.loads((WEB / "locales" / f"{lang}.json").read_text(encoding="utf-8")) for lang in LANGS}
@@ -79,8 +79,29 @@ def _lookup(locale: dict, key: str) -> str:
     return value
 
 
+def _language_menu(name: str, lang: str) -> str:
+    """Itens do seletor: cada idioma com o próprio nome, apontando para a mesma página."""
+    items = []
+    for other in LANGS:
+        loc = LOCALES[other]
+        current = ' aria-current="true"' if other == lang else ""
+        items.append(
+            f'<a href="{PAGE_URLS[name][other]}" lang="{loc["lang"]}" hreflang="{loc["lang"]}" '
+            f'data-lang="{other}" role="listitem"{current}>{loc["nav"]["lang_name"]}</a>'
+        )
+    return "\n        ".join(items)
+
+
+def _hreflang_links(name: str) -> str:
+    links = [
+        f'<link rel="alternate" hreflang="{LOCALES[other]["lang"]}" href="{SITE_URL}{PAGE_URLS[name][other]}">'
+        for other in LANGS
+    ]
+    links.append(f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}{PAGE_URLS[name]["en"]}">')
+    return "\n".join(links)
+
+
 def render_page(name: str, lang: str) -> str:
-    alt = "en" if lang == "pt" else "pt"
     html = (WEB / "base.html").read_text(encoding="utf-8").replace(
         "{{content}}", (WEB / "pages" / f"{name}.html").read_text(encoding="utf-8")
     )
@@ -92,18 +113,15 @@ def render_page(name: str, lang: str) -> str:
         r"\{\{static:([\w.]+)\}\}", lambda m: f"/static/{m.group(1)}?v={STATIC_VERSIONS[m.group(1)]}", html
     )
     js_texts = json.dumps(locale["js"], ensure_ascii=False).replace("</", "<\\/")
+    # Endereços desta página em cada idioma, para o redirecionamento da primeira visita.
+    page_urls = json.dumps(PAGE_URLS[name]).replace('"', "&quot;")
     replacements = {
         "{{title}}": locale["titles"][name],
         "{{page}}": name,
         "{{lang}}": lang,
-        "{{alt_lang}}": alt,
-        "{{alt_url}}": PAGE_URLS[name][alt],
-        "{{href_pt}}": SITE_URL + PAGE_URLS[name]["pt"],
-        "{{href_en}}": SITE_URL + PAGE_URLS[name]["en"],
-        "{{path_pt}}": PAGE_URLS[name]["pt"],
-        "{{path_en}}": PAGE_URLS[name]["en"],
-        "{{current_pt}}": 'aria-current="true"' if lang == "pt" else "",
-        "{{current_en}}": 'aria-current="true"' if lang == "en" else "",
+        "{{page_urls}}": page_urls,
+        "{{hreflang_links}}": _hreflang_links(name),
+        "{{language_menu}}": _language_menu(name, lang),
         "{{js_i18n}}": js_texts,
     }
     for placeholder, value in replacements.items():

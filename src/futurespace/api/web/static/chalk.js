@@ -9,14 +9,17 @@ function storeLang(lang) {
   try { localStorage.setItem(LANG_KEY, lang); } catch { /* navegação privada: só não lembra */ }
 }
 
-// Primeira visita: se o navegador não está em português, vai para a versão em inglês.
+// Primeira visita: usa o primeiro idioma do navegador que o site tem (senão, inglês).
 // Depois que a pessoa escolhe um idioma no menu, a escolha dela sempre vale.
 (function chooseLanguage() {
   const root = document.documentElement;
-  const current = root.dataset.lang;
-  const preferred = storedLang() || ((navigator.language || "").toLowerCase().startsWith("pt") ? "pt" : "en");
-  if (preferred !== current && root.dataset.altLang === preferred && root.dataset.altUrl) {
-    location.replace(root.dataset.altUrl + location.hash);
+  let urls = {};
+  try { urls = JSON.parse(root.dataset.urls || "{}"); } catch { return; }
+  const browser = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""])
+    .map((l) => l.toLowerCase().slice(0, 2));
+  const preferred = storedLang() || browser.find((l) => l in urls) || "en";
+  if (preferred !== root.dataset.lang && urls[preferred]) {
+    location.replace(urls[preferred] + location.hash);
   }
 })();
 
