@@ -47,3 +47,14 @@ def test_event_metrics():
     assert (m["hits"], m["misses"], m["false_alarms"]) == (1, 1, 1)
     assert m["pod"] == 0.5
     assert m["tss"] == 0.5 - 0.25
+
+
+def test_recurrence_features_look_one_rotation_back():
+    from futurespace.ml.features import ROTATION_HOURS
+
+    hourly = synthetic_hourly(ROTATION_HOURS + 100)
+    f = build_features(hourly)
+    t = ROTATION_HOURS + 50
+    assert f["rec27_speed_now"].iloc[t] == hourly["speed"].iloc[t - ROTATION_HOURS]
+    window = hourly["dst"].iloc[t - ROTATION_HOURS + 1 : t - ROTATION_HOURS + 25]
+    assert f["rec27_dst_min24"].iloc[t] == window.min()

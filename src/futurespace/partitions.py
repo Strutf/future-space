@@ -73,3 +73,4 @@ def latest_key(dataset_id: str) -> str:
 
 
 CATALOG_KEY = "json/catalog.json"
+VERIFICATION_SUMMARY_KEY = "json/verification/summary.json"

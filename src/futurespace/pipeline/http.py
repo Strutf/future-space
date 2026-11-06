@@ -44,3 +44,13 @@ def get(client: httpx.Client, url: str, params: dict | None = None, retries: int
 
 def get_json(client: httpx.Client, url: str, params: dict | None = None):
     return get(client, url, params).json()
+
+
+def get_text_optional(client: httpx.Client, url: str) -> str | None:
+    """Como `get`, mas devolve None quando o arquivo não existe (404)."""
+    try:
+        return get(client, url).text
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            return None
+        raise

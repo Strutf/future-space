@@ -14,6 +14,11 @@ def regression(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
     }
 
 
+def brier(observed: np.ndarray, probability: np.ndarray) -> float:
+    """Erro quadrático médio da probabilidade (0 é perfeito)."""
+    return float(np.mean((probability - observed.astype(float)) ** 2))
+
+
 def events(observed: np.ndarray, predicted: np.ndarray) -> dict[str, float | int]:
     """Tabela de contingência para eventos binários (ex.: Kp >= 5).
 

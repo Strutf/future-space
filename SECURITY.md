@@ -26,3 +26,11 @@ a elas. Se afetarem este projeto, como valores absurdos sendo publicados, avise 
 - Workflows rodam com `GITHUB_TOKEN` somente leitura e actions fixadas por SHA.
 - A API é somente leitura, não usa credenciais e lê apenas dados públicos.
 - Nenhum segredo deve ser commitado. `.env` está no `.gitignore`.
+
+## Modelos de IA
+
+Os modelos são salvos com `joblib`, um formato que **executa código ao ser carregado**.
+Por isso:
+- `futurespace predict` só carrega modelos do armazenamento do próprio projeto, apontados
+  por `models/current.json`. Quem tem permissão de escrita ali já é de confiança.
+- Nunca carregue um `bundle.joblib` de origem desconhecida.

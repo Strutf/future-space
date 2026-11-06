@@ -12,7 +12,8 @@ from typing import Literal
 FieldType = Literal["float", "int", "str", "bool", "time"]
 Partition = Literal["day", "month", "year"]
 Stage = Literal["sun", "l1", "orbit", "ground", "multi"]
-Schedule = Literal["realtime", "daily"]
+# "derived": produzido pelo próprio projeto (ex.: previsões), não por um conector.
+Schedule = Literal["realtime", "daily", "derived"]
 
 SWPC = "NOAA Space Weather Prediction Center"
 SWPC_LICENSE = "Domínio público (governo dos EUA). Cite: NOAA SWPC."
@@ -47,6 +48,8 @@ class Dataset:
     # "last": última linha de cada grupo em `latest_group`; "snapshot": todas as linhas do último `time`.
     latest_mode: Literal["last", "snapshot"] = "last"
     latest_group: tuple[str, ...] = ()
+    # True quando a fonte oferece histórico longo e `futurespace backfill` faz sentido.
+    historical: bool = False
     notes: str = ""
 
     @property
@@ -233,6 +236,94 @@ DATASETS: tuple[Dataset, ...] = (
         latest_mode="snapshot",
     ),
     Dataset(
+        id="cme-cactus",
+        title="Ejeções de massa coronal (CACTus, desde 1997)",
+        description="CMEs detectadas automaticamente pelo CACTus nas imagens do coronógrafo "
+        "LASCO/SOHO. CMEs largas (halo) e rápidas são as que podem atingir a Terra em 1 a 4 dias.",
+        stage="sun",
+        provider="SIDC / Observatório Real da Bélgica (CACTus)",
+        source_url="https://www.sidc.be/cactus/",
+        license="Uso livre com citação: Robbrecht & Berghmans (2004), doi:10.1051/0004-6361:20041302",
+        cadence="event",
+        partition="year",
+        key=("time", "pa", "width"),
+        fields=(
+            _time("Início estimado da CME (t0, UTC)"),
+            Field("duration", "int", "h", "Duração da liberação"),
+            Field("pa", "int", "deg", "Ângulo principal, anti-horário a partir do norte solar"),
+            Field("width", "int", "deg", "Largura angular"),
+            Field("speed", "int", "km/s", "Velocidade mediana"),
+            Field("speed_sigma", "int", "km/s", "Variação da velocidade ao longo da CME"),
+            Field("speed_min", "int", "km/s", "Menor velocidade detectada"),
+            Field("speed_max", "int", "km/s", "Maior velocidade detectada"),
+            Field("halo", "int", None, "0 = não; 2 = largura >90°; 3 = >180°; 4 = >270° (halo)"),
+            Field("catalog", "str", None, "science (1997-2015), quicklook ou realtime"),
+        ),
+        historical=True,
+        schedule="realtime",
+        update_days=40,
+        max_query_days=3660,
+        default_days=30,
+    ),
+    Dataset(
+        id="predictions",
+        title="Previsões de Dst e Kp (modelos do projeto)",
+        description="Previsões emitidas de hora em hora pelos modelos de IA do projeto, a partir "
+        "do vento solar no L1, dos índices atuais e das CMEs recentes.",
+        stage="ground",
+        provider="Future Space",
+        source_url="https://github.com/Strutf/future-space",
+        license="MIT. Previsões experimentais: não use para decisões operacionais.",
+        cadence="1h",
+        partition="month",
+        key=("time", "target", "horizon_hours"),
+        fields=(
+            _time("Momento da emissão: fim da última hora completa de dados (UTC)"),
+            Field("target", "str", None, "Índice previsto: dst ou kp"),
+            Field("horizon_hours", "int", "h", "Antecedência da previsão"),
+            Field("target_time", "time", None, "Início da hora (Dst) ou do bloco de 3 h (Kp) previsto"),
+            Field("value", "float", None, "Valor previsto (nT para Dst)"),
+            Field("storm_probability", "float", None, "Probabilidade de tempestade (Kp>=5 ou Dst<=-50)"),
+            Field("storm_alert", "bool", None, "True se a probabilidade passou do limiar do modelo"),
+            Field("model_version", "str", None, "Versão do conjunto de modelos"),
+        ),
+        schedule="derived",
+        max_query_days=93,
+        default_days=2,
+        latest_mode="snapshot",
+    ),
+    Dataset(
+        id="verification",
+        title="Verificação das previsões",
+        description="Cada previsão do projeto comparada com o valor observado depois, junto da "
+        "persistência e, para o Kp, da previsão oficial da NOAA emitida até o mesmo instante.",
+        stage="ground",
+        provider="Future Space",
+        source_url="https://github.com/Strutf/future-space",
+        license="MIT",
+        cadence="1h",
+        partition="month",
+        key=("time", "target", "horizon_hours"),
+        fields=(
+            _time("Momento em que a previsão foi emitida (UTC)"),
+            Field("target", "str", None, "Índice previsto: dst ou kp"),
+            Field("horizon_hours", "int", "h", "Antecedência da previsão"),
+            Field("target_time", "time", None, "Hora (Dst) ou bloco de 3 h (Kp) previsto"),
+            Field("predicted", "float", None, "Valor previsto pelo modelo"),
+            Field("observed", "float", None, "Valor observado"),
+            Field("error", "float", None, "Previsto menos observado"),
+            Field("persistence", "float", None, "Último valor conhecido na emissão (baseline)"),
+            Field("noaa", "float", None, "Kp previsto pela NOAA até o mesmo instante (só Kp)"),
+            Field("storm_probability", "float", None, "Probabilidade de tempestade prevista"),
+            Field("storm_alert", "bool", None, "Se o modelo emitiu alerta"),
+            Field("storm_observed", "bool", None, "Se houve tempestade (Kp>=5 ou Dst<=-50)"),
+            Field("model_version", "str", None, "Versão dos modelos"),
+        ),
+        schedule="derived",
+        max_query_days=93,
+        default_days=7,
+    ),
+    Dataset(
         id="kp",
         title="Índice Kp planetário (NOAA, 3 h)",
         description="Estimativa em tempo quase real do índice Kp (0 a 9) pela NOAA. "
@@ -314,6 +405,7 @@ DATASETS: tuple[Dataset, ...] = (
             Field("kp", "float", None, "Índice Kp"),
             Field("status", "str", None, "pre, now ou def"),
         ),
+        historical=True,
         schedule="daily",
         update_days=60,
         max_query_days=3660,
@@ -352,6 +444,7 @@ DATASETS: tuple[Dataset, ...] = (
             Field("al", "float", "nT", "Índice AL"),
             Field("au", "float", "nT", "Índice AU"),
         ),
+        historical=True,
         schedule="daily",
         update_days=120,
         max_query_days=366,

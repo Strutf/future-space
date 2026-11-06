@@ -66,7 +66,7 @@ def _select(names: str | None, schedule: str) -> list[catalog.Dataset]:
     if names:
         return [catalog.get(n.strip()) for n in names.split(",") if n.strip()]
     if schedule == "all":
-        return list(catalog.DATASETS)
+        return [d for d in catalog.DATASETS if d.schedule != "derived"]
     return [d for d in catalog.DATASETS if d.schedule == schedule]
 
 
@@ -79,7 +79,7 @@ def cmd_update(args: argparse.Namespace) -> int:
 
 def cmd_backfill(args: argparse.Namespace) -> int:
     ds = catalog.get(args.dataset)
-    if ds.schedule == "realtime":
+    if not ds.historical:
         log.warning(
             "%s vem de um endpoint de tempo real: só existem os últimos dias na fonte", ds.id
         )
@@ -95,27 +95,125 @@ def cmd_train(args: argparse.Namespace) -> int:
 
     from futurespace import storage as storage_mod
     from futurespace.ml.features import hourly_from_history, load_dataset
-    from futurespace.ml.train import train_all
+    from futurespace.ml.serve import current_report, publish_bundle
+    from futurespace.ml.train import compare, train_all
 
     store = storage_mod.from_env()
     hourly = hourly_from_history(load_dataset(store, "omni-hourly"), load_dataset(store, "kp-gfz"))
-    trained, summary = train_all(hourly)
+    cmes = None if args.no_cme else load_dataset(store, "cme-cactus")
+    trained, summary = train_all(hourly, cmes)
 
+    bundle = {
+        "model_version": summary["model_version"],
+        "features": summary["features"],
+        "models": {
+            t.name: {"regressor": t.regressor, "classifier": t.classifier, "threshold": t.threshold}
+            for t in trained
+        },
+    }
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    for t in trained:
-        joblib.dump(t.model, out / f"{t.target}_h{t.horizon}.joblib", compress=3)
+    joblib.dump(bundle, out / "bundle.joblib", compress=3)
     (out / "report.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
 
-    print(f"\n{'modelo':<8}{'RMSE modelo':>13}{'RMSE persist.':>15}{'TSS modelo':>12}{'TSS persist.':>14}{'eventos':>9}")
+    print(
+        f"\n{'modelo':<9}{'RMSE':>7}{'persist.':>9} │{'TSS clf':>8}{'regr.':>7}{'persist.':>9}"
+        f"{'POD':>6}{'FAR':>6}{'BSS':>6}{'eventos':>9}"
+    )
     for r in summary["models"]:
-        m, p = r["model"], r["persistence"]
-        name = f"{r['target']} +{r['horizon_hours']}h"
+        reg, storm = r["regression"], r["storm"]
+        bss = 1 - storm["brier"] / storm["brier_climatology"]
         print(
-            f"{name:<8}{m['rmse']:>13.2f}{p['rmse']:>15.2f}"
-            f"{m['storm']['tss']:>12.2f}{p['storm']['tss']:>14.2f}{m['storm']['events']:>9}"
+            f"{r['target'] + ' +' + str(r['horizon_hours']) + 'h':<9}"
+            f"{reg['model']['rmse']:>7.2f}{reg['persistence']['rmse']:>9.2f} │"
+            f"{storm['classifier']['tss']:>8.2f}{storm['regression']['tss']:>7.2f}"
+            f"{storm['persistence']['tss']:>9.2f}{storm['classifier']['pod']:>6.2f}"
+            f"{storm['classifier']['far']:>6.2f}{bss:>6.2f}{storm['classifier']['events']:>9}"
         )
     print(f"\nModelos e relatório em {out}/")
+
+    publish = args.publish
+    if args.publish_if_better:
+        current = current_report(store)
+        if current is None:
+            publish, reason = True, "nenhum modelo publicado ainda"
+        else:
+            publish, reason = compare(summary, current)
+            reason = f"comparado com {current['model_version']}: {reason}"
+        log.info("publicação %s: %s", "aprovada" if publish else "recusada", reason)
+        if not publish and os.environ.get("GITHUB_ACTIONS") == "true":
+            print(f"::warning::Modelo novo não publicado ({reason})", flush=True)
+    if publish:
+        publish_bundle(store, out / "bundle.joblib", summary)
+        store.commit(f"modelos {summary['model_version']}")
+        log.info("publicado como %s", summary["model_version"])
+    return 0
+
+
+def cmd_publish_model(args: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    from futurespace import storage as storage_mod
+    from futurespace.ml.serve import publish_bundle
+
+    folder = Path(args.dir)
+    summary = json.loads((folder / "report.json").read_text())
+    store = storage_mod.from_env()
+    publish_bundle(store, folder / "bundle.joblib", summary)
+    store.commit(f"modelos {summary['model_version']}")
+    log.info("modelos %s publicados", summary["model_version"])
+    return 0
+
+
+def cmd_predict(args: argparse.Namespace) -> int:
+    from futurespace import storage as storage_mod
+    from futurespace.ml.serve import NoModelPublished, predict
+    from futurespace.pipeline.writer import write_catalog, write_dataset
+
+    try:
+        store = storage_mod.from_env()
+        rows = predict(store)
+    except NoModelPublished as exc:
+        log.warning("previsão ignorada: %s", exc)
+        return 0
+    except RuntimeError as exc:
+        _error(f"previsão: {exc}")
+        return 1
+    now = datetime.now(UTC)
+    write_dataset(store, catalog.get("predictions"), rows, now=now)
+    write_catalog(store, list(catalog.DATASETS), now=now)
+    store.commit(f"previsões {rows['time'].iloc[0]:%Y-%m-%d %H:%M}Z")
+    for r in rows.itertuples():
+        alert = " ALERTA" if r.storm_alert else ""
+        log.info("%s +%dh: %.2f (tempestade %.0f%%)%s", r.target, r.horizon_hours, r.value, 100 * r.storm_probability, alert)
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    from futurespace import storage as storage_mod
+    from futurespace.ml.serve import read_recent
+    from futurespace.ml.verify import summarize, verify, write_summary
+    from futurespace.pipeline.writer import write_catalog, write_dataset
+
+    store = storage_mod.from_env()
+    now = datetime.now(UTC)
+    rows = verify(store, now=now, days=args.days)
+    if rows.empty:
+        log.info("nenhuma previsão com valor observado para verificar ainda")
+        return 0
+    ds = catalog.get("verification")
+    write_dataset(store, ds, rows, now=now)
+    history = read_recent(store, ds.id, now - timedelta(days=31), now)
+    summary = summarize(history, now)
+    write_summary(store, summary)
+    write_catalog(store, list(catalog.DATASETS), now=now)
+    store.commit(f"verificação {now:%Y-%m-%d %H:%M}Z")
+    for g in summary["windows"]["7d"]:
+        log.info(
+            "%s +%dh (7 dias, n=%d): erro médio %s | persistência %s | NOAA %s",
+            g["target"], g["horizon_hours"], g["n"], g["mae_model"], g["mae_persistence"], g["mae_noaa"],
+        )
     return 0
 
 
@@ -151,7 +249,25 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("train", help="treina os modelos de previsão de Dst e Kp")
     p.add_argument("--out", default="models", help="pasta de saída dos modelos")
+    p.add_argument("--no-cme", action="store_true", help="treina sem as variáveis de CME")
+    p.add_argument("--publish", action="store_true", help="publica os modelos no armazenamento")
+    p.add_argument(
+        "--publish-if-better",
+        action="store_true",
+        help="publica só se a avaliação não for pior que a do modelo atual",
+    )
     p.set_defaults(func=cmd_train)
+
+    p = sub.add_parser("verify", help="compara as previsões passadas com o que aconteceu")
+    p.add_argument("--days", type=int, default=30, help="quantos dias de previsões verificar")
+    p.set_defaults(func=cmd_verify)
+
+    p = sub.add_parser("publish-model", help="publica modelos já treinados no armazenamento")
+    p.add_argument("--dir", default="models", help="pasta com bundle.joblib e report.json")
+    p.set_defaults(func=cmd_publish_model)
+
+    p = sub.add_parser("predict", help="emite as previsões com os dados mais recentes")
+    p.set_defaults(func=cmd_predict)
 
     p = sub.add_parser("datasets", help="lista os datasets do catálogo")
     p.set_defaults(func=cmd_datasets)

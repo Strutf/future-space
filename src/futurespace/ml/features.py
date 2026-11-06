@@ -14,9 +14,18 @@ import numpy as np
 import pandas as pd
 
 from futurespace.partitions import manifest_key, parquet_key
+from futurespace.pipeline.connectors.cactus import prefer_curated
 from futurespace.storage import Storage
 
-FEATURE_VERSION = 1
+FEATURE_VERSION = 3
+
+# Rotação solar vista da Terra (~27,3 dias): feixes rápidos de vento solar tendem a voltar.
+ROTATION_HOURS = 27 * 24
+
+# Atraso entre o início da CME e ela aparecer no catálogo em tempo real do CACTus.
+CME_LATENCY = pd.Timedelta(hours=6)
+CME_WIDE = 90  # graus: CMEs largas (halo parcial ou total) podem atingir a Terra
+AU_KM = 1.496e8
 
 # Colunas da tabela horária que alimenta as features.
 SOLAR_WIND = ["b_abs", "by_gsm", "bz_gsm", "speed", "density", "temperature", "pressure"]
@@ -60,7 +69,45 @@ def _kp_known(kp_hourly: pd.Series) -> pd.Series:
     return pd.Series(kp_hourly.reindex(block_start).to_numpy(), index=idx)
 
 
-def build_features(hourly: pd.DataFrame) -> pd.DataFrame:
+def cme_features(cmes: pd.DataFrame, index: pd.DatetimeIndex) -> pd.DataFrame:
+    """Variáveis sobre CMEs recentes, conhecidas só a partir de t0 + CME_LATENCY.
+
+    Antes do início do catálogo os valores ficam vazios (desconhecido), não zero.
+    """
+    f = pd.DataFrame(index=index)
+    if "catalog" in cmes.columns:
+        # O armazenamento acumula detecções em tempo real já substituídas pelo quicklook.
+        cmes = prefer_curated(cmes)
+    wide = cmes[cmes["width"] >= CME_WIDE]
+    known = (wide["time"] + CME_LATENCY).dt.ceil("h")
+
+    speed = wide.groupby(known)["speed"].max().reindex(index)
+    count = wide.groupby(known).size().reindex(index, fill_value=0)
+    for win in (24, 48, 72, 96):
+        f[f"cme_wide_speed_max{win}"] = speed.rolling(win, min_periods=1).max().fillna(0)
+    f["cme_wide_count72"] = count.rolling(72, min_periods=1).sum()
+
+    # Chegada estimada (balística, velocidade constante) da CME larga mais próxima.
+    transit = pd.to_timedelta(AU_KM / wide["speed"].clip(lower=200) / 3600, unit="h")
+    arrival = (wide["time"] + transit).to_numpy()
+    rows = []
+    for k, a, v, w in zip(known.to_numpy(), arrival, wide["speed"], wide["width"], strict=True):
+        hours = pd.date_range(k, a + np.timedelta64(12, "h"), freq="h")[:150]
+        eta = (a - hours.to_numpy()) / np.timedelta64(1, "h")
+        rows.append(pd.DataFrame({"hour": hours, "eta": eta, "speed": v, "width": w}))
+    if rows:
+        eta = pd.concat(rows, ignore_index=True)
+        eta = eta.loc[eta.groupby("hour")["eta"].idxmin()].set_index("hour").reindex(index)
+        f["cme_eta_hours"] = eta["eta"]
+        f["cme_eta_speed"] = eta["speed"]
+        f["cme_eta_width"] = eta["width"]
+
+    if not cmes.empty:
+        f.loc[f.index < cmes["time"].min()] = np.nan
+    return f
+
+
+def build_features(hourly: pd.DataFrame, cmes: pd.DataFrame | None = None) -> pd.DataFrame:
     h = hourly
     f = pd.DataFrame(index=h.index)
     for col in SOLAR_WIND:
@@ -96,6 +143,14 @@ def build_features(hourly: pd.DataFrame) -> pd.DataFrame:
     f["kp_known_prev"] = kp_known.shift(3)
     f["kp_known_max24"] = kp_known.rolling(24, min_periods=12).max()
 
+    # Recorrência: como estava uma rotação solar atrás, nas 24 h equivalentes às próximas 24 h.
+    # shift(R - 24).rolling(24) em t cobre [t - R + 1, t - R + 24].
+    ahead = ROTATION_HOURS - 24
+    f["rec27_speed_now"] = h["speed"].shift(ROTATION_HOURS)
+    f["rec27_speed_mean24"] = h["speed"].shift(ahead).rolling(24, min_periods=12).mean()
+    f["rec27_kp_max24"] = h["kp"].shift(ahead).rolling(24, min_periods=12).max()
+    f["rec27_dst_min24"] = h["dst"].shift(ahead).rolling(24, min_periods=12).min()
+
     # Sazonalidade (efeito Russell-McPherron) e hora do dia.
     doy = f.index.day_of_year.to_numpy()
     hour = f.index.hour.to_numpy()
@@ -103,6 +158,8 @@ def build_features(hourly: pd.DataFrame) -> pd.DataFrame:
     f["doy_cos"] = np.cos(2 * np.pi * doy / 365.25)
     f["ut_sin"] = np.sin(2 * np.pi * hour / 24)
     f["ut_cos"] = np.cos(2 * np.pi * hour / 24)
+    if cmes is not None:
+        f = f.join(cme_features(cmes, f.index))
     return f
 
 

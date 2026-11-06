@@ -1,7 +1,8 @@
 # Versões exatas usadas pelo workflow de coleta, o único que tem acesso ao HF_TOKEN.
 # Fixar as versões impede que uma release nova (e possivelmente comprometida) de alguma
 # dependência rode automaticamente com o token. O Dependabot propõe as atualizações.
-# Uso: pip install -c requirements-pipeline.txt ".[pipeline,hf]"
+# Uso: pip install -c requirements-pipeline.txt ".[pipeline,hf,ml]"
+# scikit-learn precisa ser a mesma versão usada no treino para carregar os modelos.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.16.0
@@ -18,6 +19,7 @@ httpx==0.28.1
 httpx2==2.16.0
 huggingface_hub==2.4.0
 idna==3.20
+joblib==1.6.0
 numpy==2.5.4
 opentelemetry-api==1.45.2
 packaging==26.3
@@ -27,7 +29,10 @@ pydantic==2.14.3
 pydantic_core==2.50.4
 python-dateutil==4.0.0
 PyYAML==6.0.3
+scikit-learn==1.9.1
+scipy==1.18.1
 starlette==1.10.0
+threadpoolctl==3.8.0
 tqdm==4.70.1
 truststore==0.10.5
 typing-inspection==0.4.5

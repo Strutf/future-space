@@ -13,7 +13,7 @@ from datetime import datetime
 import httpx
 import pandas as pd
 
-from futurespace.pipeline.connectors import gfz, omni, swpc
+from futurespace.pipeline.connectors import cactus, gfz, omni, swpc
 
 Connector = Callable[[httpx.Client, datetime, datetime], pd.DataFrame]
 
@@ -24,6 +24,7 @@ CONNECTORS: dict[str, Connector] = {
     "goes-protons": swpc.goes_protons,
     "goes-flares": swpc.goes_flares,
     "solar-regions": swpc.solar_regions,
+    "cme-cactus": cactus.cme_cactus,
     "kp": swpc.kp,
     "kp-forecast": swpc.kp_forecast,
     "dst": swpc.dst,

@@ -1,0 +1,59 @@
+name: train
+
+on:
+  schedule:
+    # Dia 1 de cada mês, de madrugada (UTC).
+    - cron: "41 4 1 * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Publicar mesmo se a avaliação for pior que a do modelo atual"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Mesmo grupo do workflow de coleta: só um job grava no Hugging Face por vez.
+concurrency:
+  group: hf-writes
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      FS_STORAGE: hf
+      FS_HF_REPO: ${{ vars.FS_HF_REPO }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Instalação sem o token no ambiente: código de terceiros não consegue lê-lo.
+      - run: pip install -c requirements-pipeline.txt ".[pipeline,hf,ml]"
+      - name: Atualizar histórico de CMEs
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: futurespace backfill cme-cactus --start 1997-01-01
+      - name: Treinar e publicar
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            futurespace train --publish
+          else
+            futurespace train --publish-if-better
+          fi
+      - name: Guardar relatório
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: report
+          path: models/report.json
+          if-no-files-found: ignore
