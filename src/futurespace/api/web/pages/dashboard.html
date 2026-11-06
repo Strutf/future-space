@@ -118,11 +118,16 @@ function renderTiles(cmp) {
   }
 }
 
+const DAY_NAMES = ["yesterday_label", "today_label", "tomorrow_label"];
+
 function renderChart(cmp) {
-  const blocks = cmp.days.flatMap((d) => d.blocks);
   const chart = document.getElementById("chart");
   const W = Math.max(chart.clientWidth, 300);
-  const H = W < 600 ? 260 : 340, m = { top: 32, right: 16, bottom: 40, left: 30 };
+  // No celular cabem menos blocos: mostra só hoje e amanhã (ontem segue na tabela e no cartão).
+  const narrow = W < 600;
+  const days = cmp.days.map((d, i) => ({ ...d, name: DAY_NAMES[i] })).slice(narrow ? 1 : 0);
+  const blocks = days.flatMap((d) => d.blocks);
+  const H = narrow ? 260 : 340, m = { top: 32, right: 16, bottom: 40, left: 30 };
   const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
   const band = iw / blocks.length;
   const labelEvery = band < 40 ? 4 : 2;
@@ -157,11 +162,10 @@ function renderChart(cmp) {
   add("line", { x1: m.left, x2: W - m.right, y1: y(cmp.storm_threshold), y2: y(cmp.storm_threshold), stroke: css("--critical"), "stroke-width": 2 }, null, chalk);
   add("text", { x: W - m.right, y: y(cmp.storm_threshold) - 7, "text-anchor": "end" }, t("storm_line"));
 
-  cmp.days.forEach((d, i) => {
+  days.forEach((d, i) => {
     const x0 = x(i * 8);
     if (i) add("line", { x1: x0, x2: x0, y1: m.top - 24, y2: H - m.bottom, stroke: "rgba(241,239,231,0.4)", "stroke-width": 2, "stroke-dasharray": "6 6" }, null, chalk);
-    const name = ["yesterday_label", "today_label", "tomorrow_label"][i];
-    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(name) + " " + dayLabel(d.blocks[0].block));
+    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(d.name) + " " + dayLabel(d.blocks[0].block));
   });
 
   blocks.forEach((b, i) => {
