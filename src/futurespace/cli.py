@@ -14,13 +14,25 @@ from futurespace.partitions import parse_time
 log = logging.getLogger("futurespace")
 
 
+def _error(message: str) -> None:
+    """Loga o erro e, no GitHub Actions, também o publica como anotação da execução."""
+    log.error(message)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::error::{message}", flush=True)
+
+
 def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime) -> int:
     from futurespace import storage as storage_mod
     from futurespace.pipeline.connectors import CONNECTORS
     from futurespace.pipeline.http import make_client
     from futurespace.pipeline.writer import write_catalog, write_dataset
 
-    store = storage_mod.from_env()
+    try:
+        store = storage_mod.from_env()
+    except RuntimeError as exc:
+        _error(f"configuração: {exc}")
+        return 1
+
     failures = []
     written = []
     with make_client() as client:
@@ -30,7 +42,7 @@ def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime)
                 df = CONNECTORS[ds.id](client, ds_start, end)
                 result = write_dataset(store, ds, df, now=end)
             except Exception as exc:  # noqa: BLE001 - uma fonte fora do ar não deve parar as outras
-                log.error("%s: falhou: %s", ds.id, exc)
+                _error(f"{ds.id}: falhou: {exc}")
                 failures.append(ds.id)
                 continue
             log.info("%s: %d linhas em %s", ds.id, result.rows, ", ".join(result.partitions) or "-")
@@ -38,10 +50,14 @@ def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime)
                 written.append(ds.id)
 
     if written:
-        write_catalog(store, list(catalog.DATASETS), now=end)
-        store.commit(f"update {end:%Y-%m-%d %H:%M}Z: {', '.join(written)}")
+        try:
+            write_catalog(store, list(catalog.DATASETS), now=end)
+            store.commit(f"update {end:%Y-%m-%d %H:%M}Z: {', '.join(written)}")
+        except Exception as exc:  # noqa: BLE001 - registra o motivo antes de falhar
+            _error(f"falha ao gravar no armazenamento ({type(exc).__name__}): {exc}")
+            return 1
     if failures:
-        log.error("datasets com falha: %s", ", ".join(failures))
+        _error(f"datasets com falha: {', '.join(failures)}")
         return 1
     return 0
 

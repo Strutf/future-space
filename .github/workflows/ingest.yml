@@ -26,8 +26,20 @@ jobs:
       FS_HF_REPO: ${{ vars.FS_HF_REPO }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Verificar configuração
+        run: |
+          ok=true
+          if [ -z "$FS_HF_REPO" ]; then
+            echo "::error::Variável FS_HF_REPO ausente. Crie em Settings > Secrets and variables > Actions > aba Variables (não em Secrets)."
+            ok=false
+          fi
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Secret HF_TOKEN ausente. Crie em Settings > Secrets and variables > Actions > aba Secrets."
+            ok=false
+          fi
+          $ok
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
