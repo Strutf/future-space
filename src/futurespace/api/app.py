@@ -12,15 +12,19 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from futurespace import __version__, catalog
+from futurespace.api import compare
 from futurespace.partitions import (
     CATALOG_KEY,
+    VERIFICATION_SUMMARY_KEY,
     format_time,
     json_key,
     labels_between,
@@ -37,9 +41,13 @@ padronizados num formato comum: toda tabela tem uma coluna `time` em UTC.
 - `GET /v1/datasets`: o que existe e a cobertura temporal de cada dataset
 - `GET /v1/datasets/{id}/data`: série temporal num intervalo (JSON ou CSV)
 - `GET /v1/datasets/{id}/latest`: valores mais recentes
+- `GET /v1/datasets/predictions/latest`: previsões de Dst e Kp dos modelos do projeto
+- `GET /v1/verification/summary`: quanto as previsões erraram nos últimos 7 e 30 dias
 
 Cite sempre a fonte original indicada em `provider` e `license`.
 """
+
+DASHBOARD_HTML = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
 
 # Datas aceitas nos filtros: cobre todo o histórico (Kp desde 1932) e evita estouros de calendário.
 MIN_TIME = datetime(1900, 1, 1, tzinfo=UTC)
@@ -118,6 +126,10 @@ def create_app(storage: Storage | None = None) -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def root():
+        return RedirectResponse("/dashboard")
+
+    @app.get("/v1", include_in_schema=False)
+    def info():
         return {"name": "Future Space API", "version": __version__, "docs": "/docs", "datasets": "/v1/datasets"}
 
     @app.get("/health", include_in_schema=False)
@@ -163,6 +175,49 @@ def create_app(storage: Storage | None = None) -> FastAPI:
             raise HTTPException(404, f"ainda não há dados para '{ds.id}'")
         response.headers.update(_cache_header(60))
         return latest
+
+    def load_records(dataset_id: str, start: datetime, end: datetime) -> list[dict]:
+        ds = catalog.get(dataset_id)
+        manifest = read_json(manifest_key(ds.id))
+        if not manifest:
+            return []
+        available = set(manifest["partitions"])
+        labels = [lbl for lbl in labels_between(start, end, ds.partition) if lbl in available]
+        lo, hi = format_time(start), format_time(end)
+        parts = pool.map(lambda lbl: read_json(json_key(ds.id, lbl)) or [], labels)
+        return [r for part in parts for r in part if lo <= r["time"] <= hi]
+
+    @app.get("/dashboard", include_in_schema=False)
+    def dashboard():
+        return HTMLResponse(DASHBOARD_HTML, headers=_cache_header(300))
+
+    @app.get("/v1/compare/kp", summary="IA x NOAA: previsões de Kp de ontem e de hoje, com o observado")
+    def compare_kp(
+        response: Response,
+        day: str | None = Query(None, alias="date", description="Dia (UTC), ex.: 2026-11-07. Padrão: hoje"),
+    ):
+        now = datetime.now(UTC)
+        target_day = parse_or_400(day, "date").date() if day else now.date()
+        start = datetime(target_day.year, target_day.month, target_day.day, tzinfo=UTC) - timedelta(days=1)
+        end = start + timedelta(days=2)
+        response.headers.update(_cache_header(300))
+        return compare.build(
+            # Previsões emitidas até 3 dias antes ainda podem valer para os blocos do período.
+            load_records("predictions", start - timedelta(days=2), end),
+            load_records("kp-forecast", start - timedelta(days=4), end),
+            load_records("kp", start, end),
+            load_records("kp-gfz", start, end),
+            target_day,
+            now,
+        )
+
+    @app.get("/v1/verification/summary", summary="Desempenho recente das previsões (7 e 30 dias)")
+    def verification_summary(response: Response):
+        summary = read_json(VERIFICATION_SUMMARY_KEY)
+        if summary is None:
+            raise HTTPException(404, "ainda não há previsões verificadas")
+        response.headers.update(_cache_header(300))
+        return summary
 
     @app.get("/v1/datasets/{dataset_id}/data", summary="Série temporal num intervalo")
     def get_data(

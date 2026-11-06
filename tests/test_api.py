@@ -106,3 +106,18 @@ def test_storage_outage_returns_503_without_internal_details():
     resp = TestClient(create_app(storage)).get("/v1/datasets/kp/latest")
     assert resp.status_code == 503
     assert "exemplo.invalid" not in resp.text
+
+
+def test_dashboard_and_root_redirect(client):
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    assert resp.headers["location"] == "/dashboard"
+    page = client.get("/dashboard")
+    assert page.status_code == 200
+    assert "/v1/compare/kp" in page.text
+
+
+def test_compare_endpoint_without_predictions(client):
+    body = client.get("/v1/compare/kp", params={"date": "2026-11-06"}).json()
+    assert [d["summary"]["date"] for d in body["days"]] == ["2026-11-05", "2026-11-06"]
+    assert all(b["ia"] is None for d in body["days"] for b in d["blocks"])
