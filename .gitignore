@@ -11,3 +11,6 @@ build/
 
 # Dados locais gerados pelo pipeline (o arquivo oficial fica no Hugging Face)
 data/
+
+# Modelos treinados (artefatos binários; serão publicados no Hugging Face)
+models/

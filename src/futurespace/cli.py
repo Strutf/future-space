@@ -87,6 +87,38 @@ def cmd_backfill(args: argparse.Namespace) -> int:
     return _run([ds], parse_time(args.start), end)
 
 
+def cmd_train(args: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    import joblib
+
+    from futurespace import storage as storage_mod
+    from futurespace.ml.features import hourly_from_history, load_dataset
+    from futurespace.ml.train import train_all
+
+    store = storage_mod.from_env()
+    hourly = hourly_from_history(load_dataset(store, "omni-hourly"), load_dataset(store, "kp-gfz"))
+    trained, summary = train_all(hourly)
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    for t in trained:
+        joblib.dump(t.model, out / f"{t.target}_h{t.horizon}.joblib", compress=3)
+    (out / "report.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
+
+    print(f"\n{'modelo':<8}{'RMSE modelo':>13}{'RMSE persist.':>15}{'TSS modelo':>12}{'TSS persist.':>14}{'eventos':>9}")
+    for r in summary["models"]:
+        m, p = r["model"], r["persistence"]
+        name = f"{r['target']} +{r['horizon_hours']}h"
+        print(
+            f"{name:<8}{m['rmse']:>13.2f}{p['rmse']:>15.2f}"
+            f"{m['storm']['tss']:>12.2f}{p['storm']['tss']:>14.2f}{m['storm']['events']:>9}"
+        )
+    print(f"\nModelos e relatório em {out}/")
+    return 0
+
+
 def cmd_datasets(args: argparse.Namespace) -> int:
     for ds in catalog.DATASETS:
         print(f"{ds.id:<20} {ds.schedule:<9} {ds.cadence:<6} {ds.title}")
@@ -116,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--start", required=True, help="ex.: 1963-01-01")
     p.add_argument("--end", help="padrão: agora")
     p.set_defaults(func=cmd_backfill)
+
+    p = sub.add_parser("train", help="treina os modelos de previsão de Dst e Kp")
+    p.add_argument("--out", default="models", help="pasta de saída dos modelos")
+    p.set_defaults(func=cmd_train)
 
     p = sub.add_parser("datasets", help="lista os datasets do catálogo")
     p.set_defaults(func=cmd_datasets)

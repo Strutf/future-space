@@ -26,8 +26,13 @@ s3 = [
 api = [
     "uvicorn>=0.30",
 ]
+ml = [
+    "futurespace[pipeline]",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+]
 dev = [
-    "futurespace[pipeline,api]",
+    "futurespace[pipeline,api,ml]",
     "pytest>=8",
     "ruff>=0.6",
 ]
