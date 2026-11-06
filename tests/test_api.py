@@ -121,3 +121,38 @@ def test_compare_endpoint_without_predictions(client):
     body = client.get("/v1/compare/kp", params={"date": "2026-11-06"}).json()
     assert [d["summary"]["date"] for d in body["days"]] == ["2026-11-05", "2026-11-06"]
     assert all(b["ia"] is None for d in body["days"] for b in d["blocks"])
+
+
+def test_unknown_query_params_are_rejected(client):
+    resp = client.get("/v1/datasets/kp/latest", params={"cachebuster": "123"})
+    assert resp.status_code == 400
+    assert "cachebuster" in resp.json()["detail"]
+    assert client.get("/v1/datasets/kp/data", params={"fields": "kp"}).status_code == 200
+
+
+def test_rate_limit_per_client(populated):
+    limited = TestClient(create_app(populated, rate_limit_per_minute=3))
+    for _ in range(3):
+        assert limited.get("/health", headers={"x-real-ip": "1.1.1.1"}).status_code == 200
+    blocked = limited.get("/health", headers={"x-real-ip": "1.1.1.1", "origin": "https://exemplo.com"})
+    assert blocked.status_code == 429
+    assert int(blocked.headers["retry-after"]) >= 1
+    assert blocked.headers["cache-control"] == "no-store"
+    assert blocked.headers["access-control-allow-origin"] == "*"  # CORS também nas respostas 429
+    assert limited.get("/health", headers={"x-real-ip": "2.2.2.2"}).status_code == 200
+
+
+def test_cache_keeps_serving_stale_responses(client):
+    cache = client.get("/v1/datasets/kp/latest").headers["cache-control"]
+    assert "stale-while-revalidate" in cache and "stale-if-error" in cache
+
+
+def test_rate_limiter_window_and_memory_bound():
+    from futurespace.api.app import RateLimiter
+
+    limiter = RateLimiter(per_minute=1, max_clients=2)
+    assert limiter.retry_after("a") is None
+    assert limiter.retry_after("a") is not None
+    limiter.retry_after("b")
+    limiter.retry_after("c")  # passa do teto de clientes: limpa os antigos sem crescer sem fim
+    assert len(limiter._hits) <= 2

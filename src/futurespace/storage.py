@@ -142,8 +142,9 @@ def from_env() -> Storage:
 
 def reader_from_env() -> Storage:
     """Backend de leitura da API: FS_DATA_URL > FS_HF_REPO > pasta local FS_DATA_DIR."""
+    # Timeout curto: sob carga, é melhor falhar rápido do que acumular requisições presas.
     if url := os.environ.get("FS_DATA_URL"):
-        return HttpStorage(url)
+        return HttpStorage(url, timeout=10)
     if repo := os.environ.get("FS_HF_REPO"):
-        return HttpStorage(hf_resolve_url(repo))
+        return HttpStorage(hf_resolve_url(repo), timeout=10)
     return LocalStorage(os.environ.get("FS_DATA_DIR", "data"))

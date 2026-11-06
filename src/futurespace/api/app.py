@@ -8,17 +8,19 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 import threading
 import time
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from futurespace import __version__, catalog
 from futurespace.api import compare
@@ -77,13 +79,72 @@ class CachedStorage(Storage):
         return data
 
 
+class RateLimiter:
+    """Janela deslizante de 60 s por cliente, em memória.
+
+    Na Vercel cada instância da função tem a própria memória, então o limite vale por
+    instância: barra scripts e abusos simples, não um ataque distribuído (para isso, a
+    regra de rate limit do firewall da Vercel).
+    """
+
+    WINDOW = 60.0
+
+    def __init__(self, per_minute: int, max_clients: int = 10_000):
+        self.per_minute = per_minute
+        self.max_clients = max_clients
+        self._hits: dict[str, deque[float]] = {}
+        self._lock = threading.Lock()
+
+    def retry_after(self, client: str) -> float | None:
+        """Registra a requisição; devolve os segundos de espera se o limite estourou."""
+        now = time.monotonic()
+        with self._lock:
+            hits = self._hits.get(client)
+            if hits is None:
+                if len(self._hits) >= self.max_clients:
+                    self._prune(now)
+                hits = self._hits[client] = deque()
+            while hits and now - hits[0] >= self.WINDOW:
+                hits.popleft()
+            if len(hits) >= self.per_minute:
+                return self.WINDOW - (now - hits[0])
+            hits.append(now)
+            return None
+
+    def _prune(self, now: float) -> None:
+        self._hits = {k: v for k, v in self._hits.items() if v and now - v[-1] < self.WINDOW}
+        if len(self._hits) >= self.max_clients:
+            self._hits.clear()  # proteção de memória: em último caso, recomeça a contagem
+
+
+# Únicos parâmetros de URL aceitos. Qualquer outro é recusado, o que impede furar o cache
+# da CDN com URLs sempre diferentes (?x=1, ?x=2...) sem custo para quem ataca.
+ALLOWED_QUERY_PARAMS = frozenset({"start", "end", "fields", "format", "date"})
+
+
+def _client_ip(request: Request) -> str:
+    # Na Vercel, x-real-ip e x-forwarded-for são definidos pela borda, não pelo cliente.
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return request.headers.get("x-real-ip") or forwarded.split(",")[0].strip() or (
+        request.client.host if request.client else "desconhecido"
+    )
+
+
 def _cache_header(seconds: int) -> dict[str, str]:
-    return {"Cache-Control": f"public, max-age={seconds}, s-maxage={seconds}"}
+    # stale-while-revalidate: a CDN continua servindo a última resposta boa enquanto
+    # atualiza em segundo plano, o que segura picos de acesso sem chamar a função.
+    return {
+        "Cache-Control": f"public, max-age={seconds}, s-maxage={seconds}, "
+        f"stale-while-revalidate={max(seconds, 600)}, stale-if-error=86400"
+    }
 
 
-def create_app(storage: Storage | None = None) -> FastAPI:
+def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None = None) -> FastAPI:
     store = CachedStorage(storage or reader_from_env())
     pool = ThreadPoolExecutor(max_workers=8)
+    if rate_limit_per_minute is None:
+        rate_limit_per_minute = int(os.environ.get("FS_RATE_LIMIT_PER_MINUTE", "60"))
+    limiter = RateLimiter(rate_limit_per_minute) if rate_limit_per_minute > 0 else None
 
     app = FastAPI(
         title="Future Space API",
@@ -91,6 +152,28 @@ def create_app(storage: Storage | None = None) -> FastAPI:
         description=DESCRIPTION,
         license_info={"name": "MIT (código). Dados: ver licença de cada dataset."},
     )
+
+    # Registrado antes do CORS e dos cabeçalhos de segurança, que assim também envolvem
+    # as respostas 400/429 daqui.
+    @app.middleware("http")
+    async def guard(request: Request, call_next):
+        unknown = sorted(set(request.query_params) - ALLOWED_QUERY_PARAMS)
+        if unknown:
+            return JSONResponse(
+                {"detail": f"parâmetros desconhecidos: {', '.join(unknown)}"},
+                status_code=400,
+                headers=_cache_header(3600),
+            )
+        if limiter:
+            wait = limiter.retry_after(_client_ip(request))
+            if wait is not None:
+                return JSONResponse(
+                    {"detail": "muitas requisições; aguarde antes de tentar de novo"},
+                    status_code=429,
+                    headers={"Retry-After": str(max(1, int(wait) + 1)), "Cache-Control": "no-store"},
+                )
+        return await call_next(request)
+
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
     @app.middleware("http")

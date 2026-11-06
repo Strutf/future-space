@@ -264,6 +264,12 @@ Cada dataset tem uma janela máxima por consulta (`max_query_days`, ex.: 3 dias 
 1 minuto), para manter as respostas leves. **Para volumes grandes, como treino de IA, use os
 arquivos Parquet diretamente** (próxima seção).
 
+Limites de uso:
+- **60 requisições por minuto por IP.** Acima disso, a resposta é `429` com `Retry-After`.
+- Parâmetros fora da lista (`start`, `end`, `fields`, `format`, `date`) são recusados com `400`.
+
+Detalhes em [SECURITY.md](SECURITY.md).
+
 ## Usando os dados para treinar IA
 
 Os arquivos Parquet ficam num repositório de dataset no Hugging Face e podem ser lidos
@@ -503,6 +509,7 @@ pytest -q                                                # testes
 | `FS_HF_REPO` | Repositório de dataset no HF, ex.: `Strutf/future-space` | — |
 | `HF_TOKEN` | Token do Hugging Face com permissão de escrita (só no pipeline) | — |
 | `FS_DATA_URL` | URL base alternativa para a API ler os JSON | — |
+| `FS_RATE_LIMIT_PER_MINUTE` | Requisições por minuto por IP na API (`0` desliga) | `60` |
 | `FS_S3_BUCKET`, `FS_S3_ENDPOINT_URL` | Para `s3` (Cloudflare R2, Backblaze B2...) | — |
 
 A API lê de `FS_DATA_URL`; se não houver, de `FS_HF_REPO`; se não houver, da pasta local.
