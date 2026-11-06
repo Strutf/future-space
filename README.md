@@ -537,11 +537,37 @@ A API lê de `FS_DATA_URL`; se não houver, de `FS_HF_REPO`; se não houver, da 
 
 Recomendações de segurança para o repositório estão em [SECURITY.md](SECURITY.md).
 
+### Disparo das coletas (importante)
+
+O agendamento nativo do GitHub Actions (`on.schedule`) **nunca disparou neste repositório**.
+Ele foi testado até com intervalo de 5 minutos, enquanto as execuções manuais funcionam
+normalmente. Por isso, o disparo principal é externo, pelo [cron-job.org](https://cron-job.org)
+(gratuito), chamando a API `workflow_dispatch` do GitHub:
+
+| Job | Horário (Brasília) | URL (`.../actions/workflows/…/dispatches`) | Body |
+|---|---|---|---|
+| ingest realtime | `23 * * * *` | `ingest.yml` | `{"ref":"main","inputs":{"modo":"realtime"}}` |
+| ingest daily | `47 0 * * *` | `ingest.yml` | `{"ref":"main","inputs":{"modo":"daily"}}` |
+| train mensal | `41 1 1 * *` | `train.yml` | `{"ref":"main"}` |
+
+Configuração de cada job:
+- **Método:** `POST`
+- **Cabeçalhos:** `Authorization: Bearer <token>`, `Accept: application/vnd.github+json` e
+  `Content-Type: application/json`
+- **Token:** *fine-grained*, só com **Actions: Read and write** neste repositório
+- **Resposta esperada:** `204`
+- **Alerta:** ative o aviso por e-mail em caso de falha. Lembre de renovar o token antes de
+  ele expirar.
+
+O `on.schedule` continua no workflow, no minuto 53, como reserva. Se ele voltar a funcionar,
+os dois disparos convivem: um espera o outro, e os dados não duplicam.
+
 ### Cuidados com planos gratuitos
 - O GitHub **desativa workflows agendados após 60 dias sem atividade** no repositório.
   Faça pelo menos um commit nesse período, ou reative pela aba Actions.
-- O cron do GitHub pode atrasar alguns minutos em horários de pico. Isso não é problema,
-  porque os endpoints guardam de 24 h a 7 dias.
+- O cron do GitHub pode atrasar, pular ou nem disparar, e neste repositório nunca disparou.
+  Por isso, o disparo principal é externo (veja "Disparo das coletas"). O vento solar só
+  fica ~24 h na fonte: mais de um dia sem coleta perde dados.
 - O plano Hobby da Vercel é para uso não comercial e limita respostas a ~4,5 MB, por isso
   existe a janela máxima por consulta.
 - Os limites dos serviços mudam com o tempo. Confira antes de depender deles.
