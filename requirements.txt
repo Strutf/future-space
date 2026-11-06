@@ -1,0 +1,3 @@
+# Dependências apenas da API (usadas pela Vercel). Para o pipeline, use: pip install -e ".[pipeline,hf]"
+fastapi>=0.115
+httpx>=0.27

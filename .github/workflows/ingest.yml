@@ -1,0 +1,44 @@
+name: ingest
+
+on:
+  schedule:
+    # De hora em hora (minuto 7 para fugir do pico do GitHub). Os endpoints de vento
+    # solar só guardam ~24h, então qualquer intervalo bem menor que isso é seguro.
+    - cron: "7 * * * *"
+    # Uma vez por dia: fontes históricas com atraso (OMNI, Kp oficial do GFZ).
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      schedule:
+        description: "realtime, daily ou all"
+        default: realtime
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FS_STORAGE: hf
+      FS_HF_REPO: ${{ vars.FS_HF_REPO }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ".[pipeline,hf]"
+      - name: Coletar
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SCHEDULE="${{ inputs.schedule }}"
+          elif [ "${{ github.event.schedule }}" = "17 3 * * *" ]; then
+            SCHEDULE=daily
+          else
+            SCHEDULE=realtime
+          fi
+          futurespace update --schedule "$SCHEDULE"
