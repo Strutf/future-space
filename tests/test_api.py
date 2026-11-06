@@ -123,7 +123,7 @@ def test_site_pages(client, path, marker, lang):
     assert page.status_code == 200
     assert marker in page.text
     assert f'<html lang="{lang}"' in page.text
-    assert 'href="/static/chalk.css"' in page.text
+    assert 'href="/static/chalk.css?v=' in page.text
     assert "{{" not in page.text  # molde e traduções todos preenchidos
 
 
@@ -185,3 +185,14 @@ def test_rate_limiter_window_and_memory_bound():
     limiter.retry_after("b")
     limiter.retry_after("c")  # passa do teto de clientes: limpa os antigos sem crescer sem fim
     assert len(limiter._hits) <= 2
+
+
+def test_static_files_are_versioned_by_content(client):
+    from futurespace.api.app import STATIC_VERSIONS
+
+    version = STATIC_VERSIONS["chalk.js"]
+    assert f'src="/static/chalk.js?v={version}"' in client.get("/dashboard").text
+    fresh = client.get(f"/static/chalk.js?v={version}")
+    assert "immutable" in fresh.headers["cache-control"]
+    stale = client.get("/static/chalk.js?v=versao-antiga")
+    assert "immutable" not in stale.headers["cache-control"]

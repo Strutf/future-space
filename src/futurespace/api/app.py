@@ -6,6 +6,7 @@ Depende apenas de fastapi + httpx para caber em funções serverless gratuitas.
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import os
@@ -52,6 +53,11 @@ Cite sempre a fonte original indicada em `provider` e `license`.
 
 WEB = Path(__file__).parent / "web"
 STATIC = WEB / "static"
+# Versão de cada arquivo estático = início do hash do conteúdo. Vai no endereço (?v=...), então
+# qualquer mudança no arquivo muda o endereço e nenhum navegador usa uma cópia antiga.
+STATIC_VERSIONS = {
+    f.name: hashlib.sha256(f.read_bytes()).hexdigest()[:10] for f in STATIC.iterdir() if f.is_file()
+}
 
 # Páginas do site: cada uma é o miolo em web/pages, encaixado no molde web/base.html, com os
 # textos vindos de web/locales/<idioma>.json. Cada idioma tem os próprios endereços.
@@ -82,6 +88,9 @@ def render_page(name: str, lang: str) -> str:
     # Primeiro os textos (que podem conter {{url:...}}), depois os endereços.
     html = re.sub(r"\{\{t:([\w.]+)\}\}", lambda m: _lookup(locale, m.group(1)), html)
     html = re.sub(r"\{\{url:(\w+)\}\}", lambda m: PAGE_URLS[m.group(1)][lang], html)
+    html = re.sub(
+        r"\{\{static:([\w.]+)\}\}", lambda m: f"/static/{m.group(1)}?v={STATIC_VERSIONS[m.group(1)]}", html
+    )
     js_texts = json.dumps(locale["js"], ensure_ascii=False).replace("</", "<\\/")
     replacements = {
         "{{title}}": locale["titles"][name],
@@ -170,7 +179,7 @@ class RateLimiter:
 
 # Únicos parâmetros de URL aceitos. Qualquer outro é recusado, o que impede furar o cache
 # da CDN com URLs sempre diferentes (?x=1, ?x=2...) sem custo para quem ataca.
-ALLOWED_QUERY_PARAMS = frozenset({"start", "end", "fields", "format", "date"})
+ALLOWED_QUERY_PARAMS = frozenset({"start", "end", "fields", "format", "date", "v"})
 
 
 def _client_ip(request: Request) -> str:
@@ -265,16 +274,23 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         app.add_api_route(path, page_route(html), methods=["GET"], include_in_schema=False)
 
     @app.get("/static/{name}", include_in_schema=False)
-    def static_file(name: str):
+    def static_file(name: str, v: str | None = None):
         # Só arquivos que existem direto em web/static: nada de subpastas nem "..".
         path = STATIC / name
         if "/" in name or name.startswith(".") or not path.is_file():
             raise HTTPException(404, "arquivo não encontrado")
         media = {".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png"}
+        # Com a versão certa no endereço, o conteúdo nunca muda: pode ficar em cache para sempre.
+        # Sem ela (ou com versão antiga), cache curto, para não prender ninguém num arquivo velho.
+        cache = (
+            {"Cache-Control": "public, max-age=31536000, immutable"}
+            if v and v == STATIC_VERSIONS.get(name)
+            else _cache_header(60)
+        )
         return Response(
             path.read_bytes(),
             media_type=media.get(path.suffix, "application/octet-stream"),
-            headers=_cache_header(3600),
+            headers=cache,
         )
 
     @app.get("/v1", include_in_schema=False)
