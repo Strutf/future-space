@@ -108,18 +108,35 @@ def test_storage_outage_returns_503_without_internal_details():
     assert "exemplo.invalid" not in resp.text
 
 
-@pytest.mark.parametrize("path, marker", [
-    ("/", "O que nós fazemos"),
-    ("/dashboard", "/v1/compare/kp"),
-    ("/sobre", "As fórmulas"),
-    ("/interativo", "Em breve"),
+@pytest.mark.parametrize("path, marker, lang", [
+    ("/", "O que nós fazemos", "pt-BR"),
+    ("/dashboard", "/v1/compare/kp", "pt-BR"),
+    ("/sobre", "Como acontece uma tempestade solar", "pt-BR"),
+    ("/interativo", "Em breve", "pt-BR"),
+    ("/en", "What we do", "en"),
+    ("/en/dashboard", "/v1/compare/kp", "en"),
+    ("/en/about", "How a solar storm happens", "en"),
+    ("/en/interactive", "Coming soon", "en"),
 ])
-def test_site_pages(client, path, marker):
+def test_site_pages(client, path, marker, lang):
     page = client.get(path)
     assert page.status_code == 200
     assert marker in page.text
+    assert f'<html lang="{lang}"' in page.text
     assert 'href="/static/chalk.css"' in page.text
-    assert "{{" not in page.text  # o molde foi todo preenchido
+    assert "{{" not in page.text  # molde e traduções todos preenchidos
+
+
+@pytest.mark.parametrize("path, other", [("/sobre", "/en/about"), ("/en/about", "/sobre"), ("/", "/en")])
+def test_language_switch_points_to_same_page(client, path, other):
+    assert f'class="lang-switch" href="{other}"' in client.get(path).text
+
+
+def test_english_pages_have_no_portuguese_leftovers(client):
+    for path in ("/en", "/en/dashboard", "/en/about", "/en/interactive"):
+        text = client.get(path).text.lower()
+        for word in ("tempestade", "previsões", "ontem", "chegada", "agora", "a gente"):
+            assert word not in text, (path, word)
 
 
 def test_static_files_and_traversal(client):

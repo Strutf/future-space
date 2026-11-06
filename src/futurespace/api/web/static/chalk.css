@@ -64,6 +64,10 @@ a { color: var(--chalk-yellow); text-underline-offset: 3px; }
 }
 .nav a { color: var(--chalk); text-decoration: none; padding: 2px 6px; position: relative; }
 .nav a:hover { color: var(--chalk-yellow); }
+.nav .lang-switch {
+  font-size: 18px; color: var(--chalk-blue); border: 2px solid var(--chalk-blue); padding: 0 12px;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
 .nav a[aria-current="page"]::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 10px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M2 6 Q 20 1 38 6 T 70 5 T 98 4' fill='none' stroke='%23ffd76a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;

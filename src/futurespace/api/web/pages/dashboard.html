@@ -45,38 +45,35 @@
 </style>
 
 <section class="head">
-  <h1 class="chalk-text">Previsões</h1>
-  <p>O índice Kp previsto pela nossa IA e pela NOAA, comparado com o que aconteceu de verdade.</p>
-  <div class="meta" id="meta">Carregando…</div>
+  <h1 class="chalk-text">{{t:dashboard.title}}</h1>
+  <p>{{t:dashboard.subtitle}}</p>
+  <div class="meta" id="meta">{{t:dashboard.loading}}</div>
 </section>
 
-<section class="tiles grid-4" aria-label="Resumo">
-  <div class="tile box yellow"><div class="label">Ontem: quem chegou mais perto?</div><div class="value" id="t-winner">–</div><div class="sub" id="t-winner-sub"></div></div>
-  <div class="tile box pink"><div class="label">Teve tempestade ontem?</div><div class="value" id="t-storm">–</div><div class="sub" id="t-storm-sub"></div></div>
-  <div class="tile box blue"><div class="label">IA: Kp nas próximas 3 h</div><div class="value" id="t-ia">–</div><div class="sub" id="t-ia-sub"></div></div>
-  <div class="tile box"><div class="label">NOAA: próximo bloco</div><div class="value" id="t-noaa">–</div><div class="sub" id="t-noaa-sub"></div></div>
+<section class="tiles grid-4" aria-label="{{t:dashboard.summary_aria}}">
+  <div class="tile box yellow"><div class="label">{{t:dashboard.tile_winner}}</div><div class="value" id="t-winner">–</div><div class="sub" id="t-winner-sub"></div></div>
+  <div class="tile box pink"><div class="label">{{t:dashboard.tile_storm}}</div><div class="value" id="t-storm">–</div><div class="sub" id="t-storm-sub"></div></div>
+  <div class="tile box blue"><div class="label">{{t:dashboard.tile_ia}}</div><div class="value" id="t-ia">–</div><div class="sub" id="t-ia-sub"></div></div>
+  <div class="tile box"><div class="label">{{t:dashboard.tile_noaa}}</div><div class="value" id="t-noaa">–</div><div class="sub" id="t-noaa-sub"></div></div>
 </section>
 
 <section class="panel box">
-  <h2 class="chalk-text">Kp de 3 em 3 horas: ontem e hoje</h2>
-  <p class="hint">Cada um aparece com a última previsão que fez antes de o bloco começar. Horários em UTC (Brasília = UTC−3).
-    <a href="/sobre#formulas">Ver as fórmulas</a>.</p>
+  <h2 class="chalk-text">{{t:dashboard.chart_title}}</h2>
+  <p class="hint">{{t:dashboard.chart_hint}}</p>
   <div class="legend" aria-hidden="true">
-    <span><i class="key observed"></i>O que aconteceu</span>
-    <span><i class="key ia"></i>IA Future Space</span>
-    <span><i class="key noaa"></i>NOAA</span>
-    <span><i class="key g1"></i>Linha da tempestade (G1)</span>
+    <span><i class="key observed"></i>{{t:dashboard.legend_observed}}</span>
+    <span><i class="key ia"></i>{{t:dashboard.legend_ia}}</span>
+    <span><i class="key noaa"></i>{{t:dashboard.legend_noaa}}</span>
+    <span><i class="key g1"></i>{{t:dashboard.legend_g1}}</span>
   </div>
-  <div class="chart" id="chart"><div class="empty">Carregando…</div></div>
+  <div class="chart" id="chart"><div class="empty">{{t:dashboard.loading}}</div></div>
   <details class="table">
-    <summary>Ver os números em tabela</summary>
+    <summary>{{t:dashboard.table_toggle}}</summary>
     <div class="table-wrap"><table id="table"></table></div>
   </details>
 </section>
 
 <script>
-const hour = (iso) => iso.slice(11, 13) + "h";
-const dayLabel = (iso) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 function setTile(id, value, sub, status) {
@@ -90,36 +87,34 @@ function renderTiles(cmp, latest) {
   const [yesterday] = cmp.days;
   const s = yesterday.summary;
   if (s.winner) {
-    const names = { ia: "A IA!", noaa: "A NOAA", empate: "Empate" };
-    setTile("t-winner", names[s.winner], `erro médio: IA ${fmt(s.mae_ia, 2)} · NOAA ${fmt(s.mae_noaa, 2)} (${s.blocks_compared} blocos)`);
+    const names = { ia: t("winner_ia"), noaa: t("winner_noaa"), empate: t("winner_tie") };
+    setTile("t-winner", names[s.winner], t("winner_sub", { ia: fmt(s.mae_ia, 2), noaa: fmt(s.mae_noaa, 2), n: s.blocks_compared }));
   } else {
-    setTile("t-winner", "Ainda não dá", s.blocks_compared
-      ? `só ${s.blocks_compared} blocos com as duas previsões`
-      : "a IA ainda não tinha previsões para ontem");
+    setTile("t-winner", t("winner_none"), s.blocks_compared ? t("winner_few", { n: s.blocks_compared }) : t("winner_no_ai"));
   }
 
   const observed = yesterday.blocks.filter((b) => b.observed != null).map((b) => b.observed);
-  const yes = (v) => (v ? "sim" : "não");
-  setTile("t-storm", s.storm_observed ? "Teve!" : (observed.length ? "Não teve" : "–"),
-    (observed.length ? `Kp máximo ${fmt(Math.max(...observed))} · ` : "") +
-    `previu: IA ${yes(s.storm_forecast_ia)}, NOAA ${yes(s.storm_forecast_noaa)}`,
+  const yes = (v) => t(v ? "yes" : "no");
+  setTile("t-storm", s.storm_observed ? t("storm_yes") : (observed.length ? t("storm_no") : "–"),
+    (observed.length ? t("storm_max", { max: fmt(Math.max(...observed)) }) : "") +
+    t("storm_forecast", { ia: yes(s.storm_forecast_ia), noaa: yes(s.storm_forecast_noaa) }),
     observed.length ? (s.storm_observed ? "critical" : "good") : null);
 
   const kp3 = latest && latest.data.find((r) => r.target === "kp" && r.horizon_hours === 3);
   if (kp3) {
     const p24 = Math.max(...latest.data.filter((r) => r.target === "kp").map((r) => r.storm_probability));
-    setTile("t-ia", fmt(kp3.value), `chance de tempestade em até 24 h: ${fmt(100 * p24, 0)}%`, kp3.storm_alert ? "critical" : null);
+    setTile("t-ia", fmt(kp3.value), t("ia_sub", { pct: fmt(100 * p24, 0) }), kp3.storm_alert ? "critical" : null);
   } else {
-    setTile("t-ia", "–", "a IA ainda não publicou previsões");
+    setTile("t-ia", "–", t("ia_none"));
   }
 
   const next = cmp.noaa_next;
   if (next) {
-    const when = next.block.slice(0, 10) === cmp.generated_at.slice(0, 10) ? "hoje" : dayLabel(next.block);
-    setTile("t-noaa", fmt(next.value), `bloco das ${hour(next.block)} UTC (${when})` + (next.scale ? ` · tempestade ${next.scale}` : ""),
+    const when = next.block.slice(0, 10) === cmp.generated_at.slice(0, 10) ? t("today") : dayLabel(next.block);
+    setTile("t-noaa", fmt(next.value), t("noaa_sub", { hour: hour(next.block), when }) + (next.scale ? t("noaa_storm", { scale: next.scale }) : ""),
       next.value >= cmp.storm_threshold ? "critical" : null);
   } else {
-    setTile("t-noaa", "–", "sem previsão da NOAA arquivada");
+    setTile("t-noaa", "–", t("noaa_none"));
   }
 }
 
@@ -140,7 +135,7 @@ function renderChart(cmp) {
   svg.setAttribute("width", W);
   svg.setAttribute("height", H);
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "Kp observado e previsto pela IA e pela NOAA, por bloco de 3 horas, ontem e hoje");
+  svg.setAttribute("aria-label", t("chart_aria"));
   const add = (tag, attrs, text, parent = svg) => {
     const el = document.createElementNS(ns, tag);
     for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
@@ -160,12 +155,12 @@ function renderChart(cmp) {
     add("text", { x: m.left - 8, y: y(v) + 5, "text-anchor": "end" }, v);
   }
   add("line", { x1: m.left, x2: W - m.right, y1: y(cmp.storm_threshold), y2: y(cmp.storm_threshold), stroke: css("--critical"), "stroke-width": 2 }, null, chalk);
-  add("text", { x: W - m.right, y: y(cmp.storm_threshold) - 7, "text-anchor": "end" }, "tempestade (G1)");
+  add("text", { x: W - m.right, y: y(cmp.storm_threshold) - 7, "text-anchor": "end" }, t("storm_line"));
 
   cmp.days.forEach((d, i) => {
     const x0 = x(i * 8);
     if (i) add("line", { x1: x0, x2: x0, y1: m.top - 24, y2: H - m.bottom, stroke: "rgba(241,239,231,0.4)", "stroke-width": 2, "stroke-dasharray": "6 6" }, null, chalk);
-    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, (i ? "Hoje " : "Ontem ") + dayLabel(d.blocks[0].block));
+    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(i ? "today_label" : "yesterday_label") + " " + dayLabel(d.blocks[0].block));
   });
 
   blocks.forEach((b, i) => {
@@ -190,7 +185,7 @@ function renderChart(cmp) {
   if (elapsed > 0 && elapsed < blocks.length) {
     const nx = x(0) + band * elapsed;
     add("line", { x1: nx, x2: nx, y1: m.top, y2: H - m.bottom, stroke: css("--chalk-yellow"), "stroke-width": 2 }, null, chalk);
-    add("text", { x: nx - 5, y: m.top + 14, "text-anchor": "end", fill: css("--chalk-yellow") }, "agora");
+    add("text", { x: nx - 5, y: m.top + 14, "text-anchor": "end", fill: css("--chalk-yellow") }, t("now"));
   }
 
   chart.replaceChildren(svg, Object.assign(document.createElement("div"), { className: "tooltip", id: "tip" }));
@@ -198,12 +193,12 @@ function renderChart(cmp) {
 
 function showTip(e, b) {
   const tip = document.getElementById("tip");
-  const end = String((Number(b.block.slice(11, 13)) + 3) % 24).padStart(2, "0") + "h";
+  const end = String((Number(b.block.slice(11, 13)) + 3) % 24).padStart(2, "0") + window.T.hourSuffix;
   const row = (cls, label, val) => `<div class="row"><i class="key ${cls}"></i>${label}: <b>${val}</b></div>`;
   tip.innerHTML = `<b>${dayLabel(b.block)}, ${hour(b.block)}–${end} UTC</b>` +
-    row("observed", "Aconteceu", b.observed == null ? "ainda não" : fmt(b.observed)) +
-    row("ia", "IA", b.ia ? `${fmt(b.ia.value)} (tempestade ${fmt(100 * b.ia.probability, 0)}%)` : "sem previsão") +
-    row("noaa", "NOAA", b.noaa ? fmt(b.noaa.value) + (b.noaa.scale ? ` ${b.noaa.scale}` : "") : "sem previsão");
+    row("observed", t("tip_observed"), b.observed == null ? t("tip_not_yet") : fmt(b.observed)) +
+    row("ia", t("tip_ia"), b.ia ? `${fmt(b.ia.value)} ${t("tip_storm", { pct: fmt(100 * b.ia.probability, 0) })}` : t("tip_none")) +
+    row("noaa", t("tip_noaa"), b.noaa ? fmt(b.noaa.value) + (b.noaa.scale ? ` ${b.noaa.scale}` : "") : t("tip_none"));
   const box = document.getElementById("chart").getBoundingClientRect();
   tip.style.display = "block";
   tip.style.left = Math.max(0, Math.min(e.clientX - box.left + 14, box.width - tip.offsetWidth - 4)) + "px";
@@ -214,7 +209,7 @@ function hideTip() { document.getElementById("tip").style.display = "none"; }
 function closest(b) {
   if (b.observed == null || !b.ia || !b.noaa) return "–";
   const di = Math.abs(b.ia.value - b.observed), dn = Math.abs(b.noaa.value - b.observed);
-  return Math.abs(di - dn) < 0.05 ? "empate" : (di < dn ? "IA" : "NOAA");
+  return Math.abs(di - dn) < 0.05 ? t("closest_tie") : (di < dn ? t("th_ia") : t("th_noaa"));
 }
 
 function renderTable(cmp) {
@@ -225,7 +220,7 @@ function renderTable(cmp) {
     <td class="num">${b.noaa ? fmt(b.noaa.value) : "–"}</td>
     <td>${closest(b)}</td></tr>`).join("");
   document.getElementById("table").innerHTML =
-    `<thead><tr><th>Dia</th><th>Bloco (UTC)</th><th>Aconteceu</th><th>IA</th><th>NOAA</th><th>Mais perto</th></tr></thead><tbody>${rows}</tbody>`;
+    `<thead><tr>${["th_day", "th_block", "th_observed", "th_ia", "th_noaa", "th_closest"].map((k) => `<th>${t(k)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody>`;
 }
 
 let lastCmp = null;
@@ -238,12 +233,12 @@ async function load() {
     renderTiles(cmp, latest);
     renderChart(cmp);
     renderTable(cmp);
-    const t = new Date(cmp.generated_at);
+    const updated = new Date(cmp.generated_at);
     document.getElementById("meta").textContent =
-      `Atualizado às ${t.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} (horário local)` +
-      (latest ? ` · modelo ${latest.data[0].model_version}` : "");
+      t("updated", { time: updated.toLocaleTimeString(window.T.locale, { hour: "2-digit", minute: "2-digit" }) }) +
+      (latest ? t("model", { version: latest.data[0].model_version }) : "");
   } catch (err) {
-    document.getElementById("meta").textContent = "Não deu para carregar agora. Tentando de novo daqui a pouco.";
+    document.getElementById("meta").textContent = t("load_error");
   }
 }
 

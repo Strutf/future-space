@@ -241,7 +241,7 @@ Documentação interativa (Swagger) em `/docs`.
 | `GET /v1/datasets/predictions/latest` | Previsões mais recentes da IA |
 | `GET /v1/compare/kp?date=AAAA-MM-DD` | IA × NOAA × observado, bloco a bloco (dia e anterior) |
 | `GET /v1/verification/summary` | Erros das previsões nos últimos 7 e 30 dias |
-| `GET /`, `/dashboard`, `/sobre`, `/interativo` | Páginas do site |
+| `GET /`, `/dashboard`, `/sobre`, `/interativo` (e `/en/...`) | Páginas do site em português e inglês |
 
 Parâmetros de `/data`:
 - `start`, `end`: ISO 8601 em UTC (`2024-05-10` ou `2024-05-10T18:00Z`). Sem eles, a
@@ -469,16 +469,27 @@ versão anterior, que continua guardada em `models/<versão>/`.
 ### Site
 
 O site fica em https://future-space-six.vercel.app, com visual de quadro-negro e desenhos em
-giz. Ele é servido pela própria API, sem build: as páginas ficam em
-`src/futurespace/api/web/pages`, encaixadas no molde `web/base.html`, e o tema está em
+giz, **em português e inglês**. Ele é servido pela própria API, sem build: cada página é um
+molde em `src/futurespace/api/web/pages`, encaixado em `web/base.html`, e o tema está em
 `web/static/chalk.css`.
 
-| Página | O que mostra |
-|---|---|
-| `/` | Home: o que o projeto faz, como funciona e a previsão do momento |
-| `/dashboard` | Kp previsto pela IA e pela NOAA para ontem e hoje, bloco a bloco, com o observado e quem chegou mais perto |
-| `/sobre` | Explicações (Kp, Dst, CME, como a IA aprende) e todas as fórmulas |
-| `/interativo` | Em breve |
+| Página | Português | Inglês | O que mostra |
+|---|---|---|---|
+| Home | `/` | `/en` | O que o projeto faz, como funciona e a previsão do momento |
+| Previsões | `/dashboard` | `/en/dashboard` | Kp previsto pela IA e pela NOAA para ontem e hoje, com o observado e quem chegou mais perto |
+| Sobre | `/sobre` | `/en/about` | Como acontece uma tempestade solar, o que são Kp, Dst e CME, e todas as fórmulas |
+| Interativo | `/interativo` | `/en/interactive` | Em breve |
+
+**Traduções:** todo o texto fica em `web/locales/pt.json` e `web/locales/en.json`.
+- Nas páginas, os textos aparecem como `{{t:secao.chave}}` e os links internos como
+  `{{url:pagina}}`. O servidor monta as duas versões ao iniciar.
+- Os textos usados pelo JavaScript ficam na seção `js` e são acessados com `t("chave", {variavel})`.
+- O botão de idioma do menu leva à mesma página na outra língua e lembra a escolha. Na
+  primeira visita, navegadores que não estão em português vão para a versão em inglês.
+- Os testes garantem que os dois arquivos têm as mesmas chaves e as mesmas variáveis.
+
+**Para adicionar um idioma:** crie `web/locales/<idioma>.json` com as mesmas chaves, inclua o
+idioma em `LANGS` e os endereços em `PAGE_URLS`, ambos em `api/app.py`.
 
 Os dados do painel vêm de `GET /v1/compare/kp`.
 

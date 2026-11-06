@@ -40,7 +40,7 @@
   </span>
 
   <h1 class="chalk-text">Future Space</h1>
-  <p class="tagline">Uma inteligência artificial que fica de olho no Sol e avisa quando vem tempestade no espaço.</p>
+  <p class="tagline">{{t:home.tagline}}</p>
 
   <div class="now box yellow" id="now">
     <svg class="doodle wiggle" viewBox="0 0 64 64" aria-hidden="true">
@@ -50,27 +50,26 @@
       </g>
       <path d="M26 30h1M37 30h1M26 37q6 5 12 0" stroke="var(--chalk-yellow)"/>
     </svg>
-    <div class="bubble" id="now-text">Perguntando para a IA como está o espaço…</div>
+    <div class="bubble" id="now-text">{{t:home.now_loading}}</div>
   </div>
 
   <div class="cta">
-    <a class="chalk-btn" href="/dashboard">Ver as previsões</a>
-    <a class="chalk-btn ghost" href="/sobre">Como funciona?</a>
+    <a class="chalk-btn" href="{{url:dashboard}}">{{t:home.cta_forecasts}}</a>
+    <a class="chalk-btn ghost" href="{{url:sobre}}#storm">{{t:home.cta_how}}</a>
   </div>
 </section>
 
 <section class="cards grid-2">
   <div class="box">
-    <h2 class="chalk-text">O que nós fazemos</h2>
-    <p>A gente vigia o Sol e o espaço em volta da Terra. Juntamos dados de satélites, sondas e
-      observatórios do mundo todo, e uma IA usa tudo isso para prever <b>tempestades geomagnéticas</b>.</p>
-    <p class="muted">São elas que acendem as auroras, bagunçam o GPS e podem atrapalhar satélites e redes de energia.</p>
+    <h2 class="chalk-text">{{t:home.what_title}}</h2>
+    <p>{{t:home.what_p1}}</p>
+    <p class="muted">{{t:home.what_p2}}</p>
     <div class="stage">
       <svg class="doodle" viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="22" cy="32" r="12" stroke="var(--chalk-yellow)" filter="url(#wobble)"/>
         <path d="M38 26q8 6 0 12M44 22q12 10 0 20M50 18q16 14 0 28" stroke="var(--chalk-orange)" filter="url(#wobble)"/>
       </svg>
-      <p>O Sol solta rajadas de partículas e campo magnético…</p>
+      <p>{{t:home.what_stage1}}</p>
     </div>
     <div class="stage">
       <svg class="doodle" viewBox="0 0 64 64" aria-hidden="true">
@@ -78,19 +77,19 @@
         <path d="M24 26q5-4 9 0t6 6M22 36q6 2 10 6" stroke="var(--chalk-green)" filter="url(#wobble)"/>
         <path d="M14 16q18-10 36 0M12 48q20 12 40 0" stroke="var(--chalk-pink)" filter="url(#wobble)"/>
       </svg>
-      <p>…que chegam à Terra em horas ou dias. A gente tenta avisar antes.</p>
+      <p>{{t:home.what_stage2}}</p>
     </div>
   </div>
 
   <div class="box blue">
-    <h2 class="chalk-text">De que forma</h2>
+    <h2 class="chalk-text">{{t:home.how_title}}</h2>
     <ol class="steps">
-      <li>De hora em hora, buscamos dados de <b>12 fontes abertas</b> (NOAA, NASA, GFZ, Kyoto e SIDC).</li>
-      <li>Uma IA treinada com <b>30 anos</b> de história olha o vento solar, as explosões do Sol e o "humor" do campo magnético da Terra.</li>
-      <li>Ela prevê os índices <b>Kp</b> e <b>Dst</b> para as próximas 24 horas, com a chance de tempestade.</li>
-      <li>Todo dia comparamos com a previsão oficial da <b>NOAA</b> para ver quem chegou mais perto.</li>
+      <li>{{t:home.how_1}}</li>
+      <li>{{t:home.how_2}}</li>
+      <li>{{t:home.how_3}}</li>
+      <li>{{t:home.how_4}}</li>
     </ol>
-    <p class="muted small">Tudo é aberto: os dados, o código e a API.</p>
+    <p class="muted small">{{t:home.how_note}}</p>
   </div>
 </section>
 
@@ -99,17 +98,13 @@
     const latest = await getJson("/v1/datasets/predictions/latest").catch(() => null);
     const el = document.getElementById("now-text");
     if (!latest || !latest.data.length) {
-      el.textContent = "A IA ainda está esquentando os motores. Volte daqui a pouco!";
+      el.textContent = t("now_empty");
       return;
     }
     const kp = latest.data.filter((r) => r.target === "kp");
     const p = Math.max(...kp.map((r) => r.storm_probability));
     const alert = kp.some((r) => r.storm_alert);
     const pct = Math.round(100 * p);
-    el.innerHTML = alert
-      ? `<b>Atenção!</b> A IA acha que pode vir tempestade nas próximas 24 h (${pct}% de chance).`
-      : p >= 0.15
-        ? `<b>Fique de olho:</b> o espaço está agitado. Chance de tempestade em 24 h: ${pct}%.`
-        : `<b>Tudo calmo no espaço.</b> Chance de tempestade nas próximas 24 h: ${pct}%.`;
+    el.innerHTML = t(alert ? "now_alert" : p >= 0.15 ? "now_watch" : "now_calm", { pct });
   })();
 </script>

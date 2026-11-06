@@ -22,7 +22,7 @@
   .steps-story h3 { font-size: 22px; margin: 4px 0 6px; }
   .steps-story p { margin: 0 0 6px; }
   .ai-note { font-size: 16px; color: var(--chalk-green); }
-  .ai-note::before { content: "A IA olha aqui: "; color: var(--chalk-muted); }
+  .ai-note span { color: var(--chalk-muted); }
   .clock {
     display: inline-block; font-size: 16px; color: var(--board); background: var(--chalk-blue);
     padding: 0 10px; border-radius: 12px 4px 12px 4px; margin-left: 6px; white-space: nowrap;
@@ -51,41 +51,36 @@
 </style>
 
 <section class="intro">
-  <h1 class="chalk-text">Sobre as previsões</h1>
-  <p>Tudo o que a IA olha, como ela decide e como a gente confere se ela acertou.</p>
+  <h1 class="chalk-text">{{t:sobre.title}}</h1>
+  <p>{{t:sobre.subtitle}}</p>
 </section>
 
 <section class="explain grid-2">
   <div class="box yellow">
-    <h2 class="chalk-text">O que é o Kp?</h2>
-    <p>Uma nota de <b>0 a 9</b> que diz o quanto o campo magnético da Terra está "chacoalhando".
-      Sai a cada 3 horas, medida por magnetômetros espalhados pelo planeta.</p>
-    <p class="muted">Kp 5 ou mais é tempestade (G1). Kp 9 é tempestade extrema (G5), como em maio de 2024.</p>
+    <h2 class="chalk-text">{{t:sobre.kp_title}}</h2>
+    <p>{{t:sobre.kp_p1}}</p>
+    <p class="muted">{{t:sobre.kp_p2}}</p>
   </div>
   <div class="box blue">
-    <h2 class="chalk-text">O que é o Dst?</h2>
-    <p>Mede, de hora em hora, a força de um "anel" de corrente elétrica que se forma em volta da Terra
-      durante as tempestades. Quanto <b>mais negativo</b>, mais forte.</p>
-    <p class="muted">Abaixo de −50 nT já é tempestade. Ele mostra melhor o efeito em lugares perto do
-      equador, como o Brasil.</p>
+    <h2 class="chalk-text">{{t:sobre.dst_title}}</h2>
+    <p>{{t:sobre.dst_p1}}</p>
+    <p class="muted">{{t:sobre.dst_p2}}</p>
   </div>
   <div class="box pink">
-    <h2 class="chalk-text">O que é uma CME?</h2>
-    <p>Uma <b>ejeção de massa coronal</b>: uma bolha gigante de gás e campo magnético que o Sol arremessa
-      no espaço. Quando vem na direção da Terra, chega em 1 a 4 dias.</p>
-    <p class="muted">São a causa das maiores tempestades.</p>
+    <h2 class="chalk-text">{{t:sobre.cme_title}}</h2>
+    <p>{{t:sobre.cme_p1}}</p>
+    <p class="muted">{{t:sobre.cme_p2}}</p>
   </div>
   <div class="box green">
-    <h2 class="chalk-text">Como a IA aprende?</h2>
-    <p>Ela estudou <b>30 anos</b> de medições do vento solar e dos índices da Terra, procurando os padrões
-      que vêm antes de cada tempestade. Ela não "inventa": só usa dados que existem na hora da previsão.</p>
-    <p class="muted">Todo mês ela é treinada de novo, mas só entra no ar se não ficar pior.</p>
+    <h2 class="chalk-text">{{t:sobre.ai_title}}</h2>
+    <p>{{t:sobre.ai_p1}}</p>
+    <p class="muted">{{t:sobre.ai_p2}}</p>
   </div>
 </section>
 
-<section class="story box" id="tempestade">
-  <h2 class="chalk-text">Como acontece uma tempestade solar</h2>
-  <p class="lead">Uma viagem de 150 milhões de quilômetros, do Sol até o céu da Terra, em seis passos.</p>
+<section class="story box" id="storm">
+  <h2 class="chalk-text">{{t:sobre.story_title}}</h2>
+  <p class="lead">{{t:sobre.story_lead}}</p>
 
   <ol class="steps-story">
     <li>
@@ -97,11 +92,9 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">O Sol fica com o campo magnético "torcido"</h3>
-        <p>O Sol é uma bola gigante de gás eletrizado que gira e se mexe sem parar. Isso torce o campo
-          magnético dele como um elástico enrolado. Onde ele fica muito torcido aparecem as
-          <b>manchas solares</b>, as regiões ativas.</p>
-        <p class="ai-note">as regiões ativas da NOAA e o ciclo de ~11 anos (manchas solares no OMNI)</p>
+        <h3 class="chalk-text">{{t:sobre.s1_title}}</h3>
+        <p>{{t:sobre.s1_p1}}</p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s1_ai}}</p>
       </div>
     </li>
 
@@ -114,11 +107,9 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">O elástico arrebenta: explosão!</h3>
-        <p>Quando o campo torcido se rompe e se reconecta, ele solta de uma vez a energia guardada: é a
-          <b>explosão solar</b> (flare). A luz e os raios-X chegam à Terra em <b>8 minutos</b> e podem
-          deixar o rádio mudo no lado do planeta virado para o Sol.<span class="clock">8 min</span></p>
-        <p class="ai-note">o fluxo de raios-X e os flares medidos pelos satélites GOES</p>
+        <h3 class="chalk-text">{{t:sobre.s2_title}}</h3>
+        <p>{{t:sobre.s2_p1}}<span class="clock">{{t:sobre.s2_clock}}</span></p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s2_ai}}</p>
       </div>
     </li>
 
@@ -131,13 +122,10 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">Uma bolha gigante é arremessada</h3>
-        <p>Às vezes a explosão arremessa também uma <b>bolha de gás e campo magnético</b> do tamanho de
-          vários planetas: a <b>CME</b>. Ela viaja de 300 a 3.000 km por segundo e, se vier na
-          nossa direção, chega em <b>menos de um dia até 4 dias</b>.<span class="clock">1 a 4 dias</span></p>
-        <p>Outras tempestades, mais fracas, vêm de "buracos" na atmosfera do Sol que sopram um vento
-          solar mais rápido. Como o Sol gira a cada ~27 dias, eles costumam voltar na volta seguinte.</p>
-        <p class="ai-note">as CMEs do catálogo CACTus e a recorrência de 27 dias</p>
+        <h3 class="chalk-text">{{t:sobre.s3_title}}</h3>
+        <p>{{t:sobre.s3_p1}}<span class="clock">{{t:sobre.s3_clock}}</span></p>
+        <p>{{t:sobre.s3_p2}}</p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s3_ai}}</p>
       </div>
     </li>
 
@@ -151,11 +139,9 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">As sentinelas veem chegar</h3>
-        <p>A 1,5 milhão de km da Terra, num ponto chamado <b>L1</b>, ficam sondas que medem o vento solar
-          antes de ele chegar aqui. Quando a bolha passa por elas, temos de <b>15 a 60 minutos</b> de
-          aviso.<span class="clock">15–60 min</span></p>
-        <p class="ai-note">a velocidade, a densidade e o campo magnético medidos no L1, minuto a minuto</p>
+        <h3 class="chalk-text">{{t:sobre.s4_title}}</h3>
+        <p>{{t:sobre.s4_p1}}<span class="clock">{{t:sobre.s4_clock}}</span></p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s4_ai}}</p>
       </div>
     </li>
 
@@ -168,12 +154,9 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">O ímã encaixa (ou não)</h3>
-        <p>A Terra também é um ímã gigante, e ele normalmente nos protege. O segredo está na
-          <b>direção do campo magnético da bolha</b>. Se ele aponta para o <b>sul</b> (o famoso
-          <b>Bz negativo</b>), os dois campos se encaixam como ímãs de polos opostos, e a energia
-          do Sol entra. Se aponta para o norte, quase nada acontece.</p>
-        <p class="ai-note">o Bz e a função de acoplamento de Newell, as variáveis mais importantes do modelo</p>
+        <h3 class="chalk-text">{{t:sobre.s5_title}}</h3>
+        <p>{{t:sobre.s5_p1}}</p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s5_ai}}</p>
       </div>
     </li>
 
@@ -187,114 +170,104 @@
         </g></svg>
       </div>
       <div>
-        <h3 class="chalk-text">Tempestade! Auroras, GPS e satélites</h3>
-        <p>A energia que entrou faz o campo magnético da Terra <b>chacoalhar</b> (o <b>Kp</b> sobe) e
-          enche um <b>anel de corrente elétrica</b> em volta do planeta (o <b>Dst</b> fica negativo).
-          Partículas descem pelos polos e acendem as <b>auroras</b>.</p>
-        <p>Aqui embaixo, a tempestade pode deixar o <b>GPS</b> impreciso, atrapalhar o rádio, forçar
-          satélites e induzir correntes em <b>redes de energia</b>. No Brasil, perto do equador, o efeito
-          mais comum é no GPS, e a região da Anomalia Magnética do Atlântico Sul deixa os satélites que
-          passam por cima mais expostos.</p>
-        <p class="ai-note">é isso que ela prevê: o Kp e o Dst das próximas 24 horas</p>
+        <h3 class="chalk-text">{{t:sobre.s6_title}}</h3>
+        <p>{{t:sobre.s6_p1}}</p>
+        <p>{{t:sobre.s6_p2}}</p>
+        <p class="ai-note"><span>{{t:sobre.ai_looks}}</span> {{t:sobre.s6_ai}}</p>
       </div>
     </li>
   </ol>
 
   <div class="travel">
-    <h3 class="chalk-text">Quanto tempo leva para cada coisa chegar?</h3>
+    <h3 class="chalk-text">{{t:sobre.travel_title}}</h3>
     <table>
-      <tr><td>Luz e raios-X</td><td>8 minutos. Chegam junto com a notícia: não dá para avisar antes.</td></tr>
-      <tr><td>Partículas muito rápidas</td><td>De 20 minutos a algumas horas, em tempestades de radiação.</td></tr>
-      <tr><td>Bolha (CME)</td><td>De menos de 1 dia a 4 dias. É aqui que a previsão faz diferença.</td></tr>
-      <tr><td>Aviso do ponto L1</td><td>De 15 a 60 minutos antes de a bolha bater na Terra.</td></tr>
+      <tr><td>{{t:sobre.travel_light}}</td><td>{{t:sobre.travel_light_text}}</td></tr>
+      <tr><td>{{t:sobre.travel_particles}}</td><td>{{t:sobre.travel_particles_text}}</td></tr>
+      <tr><td>{{t:sobre.travel_cme}}</td><td>{{t:sobre.travel_cme_text}}</td></tr>
+      <tr><td>{{t:sobre.travel_l1}}</td><td>{{t:sobre.travel_l1_text}}</td></tr>
     </table>
   </div>
 </section>
 
 <section class="formulas box" id="formulas">
-  <h2 class="chalk-text">As fórmulas</h2>
-  <p class="muted small">Para quem quer ver a matemática por trás. Clique em cada parte para abrir.</p>
+  <h2 class="chalk-text">{{t:sobre.formulas_title}}</h2>
+  <p class="muted small">{{t:sobre.formulas_hint}}</p>
 
   <details>
-    <summary>Variáveis físicas calculadas a partir do vento solar</summary>
+    <summary>{{t:sobre.f_physics}}</summary>
     <dl>
-      <dt>Ângulo do campo magnético (<i>clock angle</i>)</dt>
+      <dt>{{t:sobre.f_clock_title}}</dt>
       <dd><math display="block"><mi>θ</mi><mo>=</mo><mi>atan2</mi><mo>(</mo><msub><mi>B</mi><mi>y</mi></msub><mo>,</mo><msub><mi>B</mi><mi>z</mi></msub><mo>)</mo></math>
-        Componentes do campo interplanetário no sistema GSM, em nT.</dd>
+        {{t:sobre.f_clock_text}}</dd>
 
-      <dt>Função de acoplamento de Newell</dt>
+      <dt>{{t:sobre.f_newell_title}}</dt>
       <dd><math display="block"><mfrac><mrow><mi>d</mi><mi>Φ</mi></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac><mo>=</mo><msup><mi>v</mi><mrow><mn>4</mn><mo>/</mo><mn>3</mn></mrow></msup><mo>·</mo><msubsup><mi>B</mi><mi>T</mi><mrow><mn>2</mn><mo>/</mo><mn>3</mn></mrow></msubsup><mo>·</mo><msup><mrow><mo>|</mo><mi>sin</mi><mo>(</mo><mi>θ</mi><mo>/</mo><mn>2</mn><mo>)</mo><mo>|</mo></mrow><mrow><mn>8</mn><mo>/</mo><mn>3</mn></mrow></msup><mspace width="1em"/><msub><mi>B</mi><mi>T</mi></msub><mo>=</mo><msqrt><msubsup><mi>B</mi><mi>y</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>B</mi><mi>z</mi><mn>2</mn></msubsup></msqrt></math>
-        Estima quanta energia do vento solar entra na magnetosfera (Newell et al., 2007). <i>v</i> em km/s.</dd>
+        {{t:sobre.f_newell_text}}</dd>
 
-      <dt>Campo elétrico com Bz para o sul (VBs)</dt>
+      <dt>{{t:sobre.f_vbs_title}}</dt>
       <dd><math display="block"><mi>VBs</mi><mo>=</mo><mfrac><mrow><mi>v</mi><mo>·</mo><mi>max</mi><mo>(</mo><mo>−</mo><msub><mi>B</mi><mi>z</mi></msub><mo>,</mo><mn>0</mn><mo>)</mo></mrow><mn>1000</mn></mfrac><mspace width="0.5em"/><mtext>[mV/m]</mtext></math>
-        Só conta quando Bz aponta para o sul, a condição que abre a magnetosfera.</dd>
+        {{t:sobre.f_vbs_text}}</dd>
 
-      <dt>Pressão dinâmica</dt>
+      <dt>{{t:sobre.f_pressure_title}}</dt>
       <dd><math display="block"><mi>P</mi><mo>=</mo><mn>2</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup><mo>·</mo><mi>n</mi><mo>·</mo><msup><mi>v</mi><mn>2</mn></msup><mspace width="0.5em"/><mtext>[nPa]</mtext></math>
-        Mesma fórmula da base OMNI. <i>n</i> em cm⁻³, <i>v</i> em km/s.</dd>
+        {{t:sobre.f_pressure_text}}</dd>
 
-      <dt>Chegada estimada de uma CME</dt>
-      <dd><math display="block"><msub><mi>t</mi><mtext>chegada</mtext></msub><mo>=</mo><msub><mi>t</mi><mn>0</mn></msub><mo>+</mo><mfrac><mrow><mn>1</mn><mspace width="0.2em"/><mtext>UA</mtext></mrow><mi>v</mi></mfrac><mspace width="1em"/><mn>1</mn><mspace width="0.2em"/><mtext>UA</mtext><mo>=</mo><mn>1,496</mn><mo>×</mo><msup><mn>10</mn><mn>8</mn></msup><mspace width="0.2em"/><mtext>km</mtext></math>
-        Para CMEs com largura ≥ 90°. A CME só passa a ser conhecida pelo modelo em
-        <i>t</i><sub>0</sub> + 6 h, o atraso típico do catálogo em tempo real.</dd>
+      <dt>{{t:sobre.f_cme_title}}</dt>
+      <dd><math display="block"><msub><mi>t</mi><mtext>{{t:sobre.m_arrival}}</mtext></msub><mo>=</mo><msub><mi>t</mi><mn>0</mn></msub><mo>+</mo><mfrac><mrow><mn>1</mn><mspace width="0.2em"/><mtext>{{t:sobre.m_au}}</mtext></mrow><mi>v</mi></mfrac><mspace width="1em"/><mn>1</mn><mspace width="0.2em"/><mtext>{{t:sobre.m_au}}</mtext><mo>=</mo><mn>{{t:sobre.m_num_au}}</mn><mo>×</mo><msup><mn>10</mn><mn>8</mn></msup><mspace width="0.2em"/><mtext>km</mtext></math>
+        {{t:sobre.f_cme_text}}</dd>
 
-      <dt>Recorrência solar</dt>
-      <dd><math display="block"><msub><mi>x</mi><mtext>rec</mtext></msub><mo>(</mo><mi>t</mi><mo>)</mo><mo>=</mo><mi>x</mi><mo>(</mo><mi>t</mi><mo>−</mo><mn>27</mn><mspace width="0.2em"/><mtext>dias</mtext><mo>)</mo></math>
-        Velocidade, Kp e Dst de uma rotação solar atrás: feixes rápidos de vento solar tendem a voltar.</dd>
+      <dt>{{t:sobre.f_rec_title}}</dt>
+      <dd><math display="block"><msub><mi>x</mi><mtext>rec</mtext></msub><mo>(</mo><mi>t</mi><mo>)</mo><mo>=</mo><mi>x</mi><mo>(</mo><mi>t</mi><mo>−</mo><mn>27</mn><mspace width="0.2em"/><mtext>{{t:sobre.m_days}}</mtext><mo>)</mo></math>
+        {{t:sobre.f_rec_text}}</dd>
     </dl>
   </details>
 
   <details>
-    <summary>O modelo de IA</summary>
+    <summary>{{t:sobre.f_model}}</summary>
     <dl>
-      <dt>Gradient boosting (valor previsto)</dt>
+      <dt>{{t:sobre.f_gb_title}}</dt>
       <dd><math display="block"><mover><mi>y</mi><mo>^</mo></mover><mo>=</mo><msub><mi>F</mi><mi>M</mi></msub><mo>(</mo><mi>x</mi><mo>)</mo><mo>=</mo><msub><mi>F</mi><mn>0</mn></msub><mo>+</mo><munderover><mo>∑</mo><mrow><mi>m</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></munderover><mi>η</mi><mo>·</mo><msub><mi>f</mi><mi>m</mi></msub><mo>(</mo><mi>x</mi><mo>)</mo></math>
-        Soma de <i>M</i> árvores de decisão (até 1000), cada uma com até 31 folhas, treinada
-        para corrigir o erro das anteriores. Taxa de aprendizado η = 0,05. Não existe uma fórmula
-        física fechada: as árvores aprendem as relações a partir dos dados.</dd>
+        {{t:sobre.f_gb_text}}</dd>
 
-      <dt>Probabilidade de tempestade</dt>
-      <dd><math display="block"><mi>p</mi><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>F</mi><mo>(</mo><mi>x</mi><mo>)</mo></mrow></msup></mrow></mfrac><mspace width="1em"/><mtext>alerta se</mtext><mspace width="0.5em"/><mi>p</mi><mo>≥</mo><msup><mi>p</mi><mo>*</mo></msup></math>
-        O limiar <i>p</i>* de cada modelo é o que maximiza o HSS no período de validação (2015–2018).</dd>
+      <dt>{{t:sobre.f_prob_title}}</dt>
+      <dd><math display="block"><mi>p</mi><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>F</mi><mo>(</mo><mi>x</mi><mo>)</mo></mrow></msup></mrow></mfrac><mspace width="1em"/><mtext>{{t:sobre.m_alert_if}}</mtext><mspace width="0.5em"/><mi>p</mi><mo>≥</mo><msup><mi>p</mi><mo>*</mo></msup></math>
+        {{t:sobre.f_prob_text}}</dd>
 
-      <dt>O que conta como tempestade</dt>
-      <dd><math display="block"><mi>Kp</mi><mo>≥</mo><mn>4,67</mn><mspace width="0.5em"/><mtext>(G1 ou mais)</mtext><mspace width="1.5em"/><mi>Dst</mi><mo>≤</mo><mo>−</mo><mn>50</mn><mspace width="0.2em"/><mtext>nT</mtext></math></dd>
+      <dt>{{t:sobre.f_storm_title}}</dt>
+      <dd><math display="block"><mi>Kp</mi><mo>≥</mo><mn>{{t:sobre.m_kp_storm}}</mn><mspace width="0.5em"/><mtext>{{t:sobre.m_g1}}</mtext><mspace width="1.5em"/><mi>Dst</mi><mo>≤</mo><mo>−</mo><mn>50</mn><mspace width="0.2em"/><mtext>nT</mtext></math></dd>
     </dl>
   </details>
 
   <details>
-    <summary>Métricas de acerto</summary>
+    <summary>{{t:sobre.f_metrics}}</summary>
     <dl>
-      <dt>Erro médio absoluto e RMSE</dt>
+      <dt>{{t:sobre.f_mae_title}}</dt>
       <dd><math display="block"><mi>MAE</mi><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munder><mo>∑</mo><mi>i</mi></munder><mo>|</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub><mo>|</mo><mspace width="1.5em"/><mi>RMSE</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></math></dd>
 
-      <dt>Detecção de tempestades</dt>
+      <dt>{{t:sobre.f_detect_title}}</dt>
       <dd><math display="block"><mi>POD</mi><mo>=</mo><mfrac><mi>A</mi><mrow><mi>A</mi><mo>+</mo><mi>P</mi></mrow></mfrac><mspace width="1.5em"/><mi>FAR</mi><mo>=</mo><mfrac><mi>F</mi><mrow><mi>A</mi><mo>+</mo><mi>F</mi></mrow></mfrac><mspace width="1.5em"/><mi>TSS</mi><mo>=</mo><mfrac><mi>A</mi><mrow><mi>A</mi><mo>+</mo><mi>P</mi></mrow></mfrac><mo>−</mo><mfrac><mi>F</mi><mrow><mi>F</mi><mo>+</mo><mi>C</mi></mrow></mfrac></math>
-        <i>A</i> = acertos, <i>P</i> = tempestades perdidas, <i>F</i> = alarmes falsos, <i>C</i> = calmarias previstas corretamente.</dd>
+        {{t:sobre.f_detect_text}}</dd>
 
       <dt>Heidke skill score (HSS)</dt>
       <dd><math display="block"><mi>HSS</mi><mo>=</mo><mfrac><mrow><mo>(</mo><mi>A</mi><mo>+</mo><mi>C</mi><mo>)</mo><mo>−</mo><mi>E</mi></mrow><mrow><mi>N</mi><mo>−</mo><mi>E</mi></mrow></mfrac><mspace width="1em"/><mi>E</mi><mo>=</mo><mfrac><mrow><mo>(</mo><mi>A</mi><mo>+</mo><mi>P</mi><mo>)</mo><mo>(</mo><mi>A</mi><mo>+</mo><mi>F</mi><mo>)</mo><mo>+</mo><mo>(</mo><mi>C</mi><mo>+</mo><mi>P</mi><mo>)</mo><mo>(</mo><mi>C</mi><mo>+</mo><mi>F</mi><mo>)</mo></mrow><mi>N</mi></mfrac></math>
-        Quanto melhor que o acaso. Pune alarmes falsos, por isso é usado para escolher o limiar de alerta.</dd>
+        {{t:sobre.f_hss_text}}</dd>
 
-      <dt>Qualidade da probabilidade (Brier skill score)</dt>
-      <dd><math display="block"><mi>BS</mi><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>p</mi><mi>i</mi></msub><mo>−</mo><msub><mi>o</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mspace width="1.5em"/><mi>BSS</mi><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mi>BS</mi><msub><mi>BS</mi><mtext>clima</mtext></msub></mfrac></math>
-        <i>o</i> = 1 se houve tempestade. A referência é sempre prever a frequência histórica.</dd>
+      <dt>{{t:sobre.f_bss_title}}</dt>
+      <dd><math display="block"><mi>BS</mi><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>p</mi><mi>i</mi></msub><mo>−</mo><msub><mi>o</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mspace width="1.5em"/><mi>BSS</mi><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mi>BS</mi><msub><mi>BS</mi><mtext>{{t:sobre.m_clim}}</mtext></msub></mfrac></math>
+        {{t:sobre.f_bss_text}}</dd>
     </dl>
   </details>
 
   <details>
-    <summary>Regra da comparação IA × NOAA</summary>
+    <summary>{{t:sobre.f_compare}}</summary>
     <dl>
-      <dt>Previsão considerada em cada bloco</dt>
-      <dd><math display="block"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>b</mi></msub><mo>=</mo><mtext>última previsão emitida em</mtext><mspace width="0.3em"/><mi>t</mi><mo>≤</mo><mi>min</mi><mo>(</mo><msub><mi>t</mi><mtext>início do bloco</mtext></msub><mo>,</mo><mtext>agora</mtext><mo>)</mo></math>
-        Vale igual para as duas fontes: ninguém é avaliado com informação que não tinha.</dd>
+      <dt>{{t:sobre.f_block_title}}</dt>
+      <dd><math display="block"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>b</mi></msub><mo>=</mo><mtext>{{t:sobre.m_last_forecast}}</mtext><mspace width="0.3em"/><mi>t</mi><mo>≤</mo><mi>min</mi><mo>(</mo><msub><mi>t</mi><mtext>{{t:sobre.m_block_start}}</mtext></msub><mo>,</mo><mtext>{{t:sobre.m_now}}</mtext><mo>)</mo></math>
+        {{t:sobre.f_block_text}}</dd>
 
-      <dt>Quem chegou mais perto no dia</dt>
-      <dd><math display="block"><mtext>vencedor</mtext><mo>=</mo><mi>arg</mi><mspace width="0.2em"/><mi>min</mi><mo>{</mo><msub><mi>MAE</mi><mtext>IA</mtext></msub><mo>,</mo><msub><mi>MAE</mi><mtext>NOAA</mtext></msub><mo>}</mo></math>
-        Calculado só nos blocos em que as duas previsões e o Kp observado existem. Empate se a
-        diferença for menor que 0,05, e sem vencedor se menos da metade dos blocos for comparável.
-        O Kp observado é o do GFZ Potsdam quando disponível, senão a estimativa da NOAA.</dd>
+      <dt>{{t:sobre.f_winner_title}}</dt>
+      <dd><math display="block"><mtext>{{t:sobre.m_winner}}</mtext><mo>=</mo><mi>arg</mi><mspace width="0.2em"/><mi>min</mi><mo>{</mo><msub><mi>MAE</mi><mtext>{{t:sobre.m_ia}}</mtext></msub><mo>,</mo><msub><mi>MAE</mi><mtext>NOAA</mtext></msub><mo>}</mo></math>
+        {{t:sobre.f_winner_text}}</dd>
     </dl>
   </details>
 </section>

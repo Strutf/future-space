@@ -1,4 +1,44 @@
-// Utilidades comuns das páginas: estrelinhas de giz e formatação de números.
+// Utilidades comuns das páginas: tradução, idioma, estrelinhas de giz e formatação de números.
+
+const LANG_KEY = "fs-lang";
+
+function storedLang() {
+  try { return localStorage.getItem(LANG_KEY); } catch { return null; }
+}
+function storeLang(lang) {
+  try { localStorage.setItem(LANG_KEY, lang); } catch { /* navegação privada: só não lembra */ }
+}
+
+// Primeira visita: se o navegador não está em português, vai para a versão em inglês.
+// Depois que a pessoa escolhe um idioma no menu, a escolha dela sempre vale.
+(function chooseLanguage() {
+  const root = document.documentElement;
+  const current = root.dataset.lang;
+  const preferred = storedLang() || ((navigator.language || "").toLowerCase().startsWith("pt") ? "pt" : "en");
+  if (preferred !== current && root.dataset.altLang === preferred && root.dataset.altUrl) {
+    location.replace(root.dataset.altUrl + location.hash);
+  }
+})();
+
+// Texto traduzido, com {variáveis}: t("winner_few", { n: 3 })
+function t(key, vars = {}) {
+  const text = (window.T && window.T[key]) ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, name) => (vars[name] ?? ""));
+}
+
+const fmt = (v, d = 1) =>
+  v == null ? "–" : Number(v).toLocaleString(window.T.locale, { maximumFractionDigits: d, minimumFractionDigits: d });
+
+// "07/11" em português, "11/07" em inglês.
+const dayLabel = (iso) =>
+  new Date(iso).toLocaleDateString(window.T.locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+
+const hour = (iso) => iso.slice(11, 13) + window.T.hourSuffix;
+
+async function getJson(url) {
+  const r = await fetch(url);
+  return r.ok ? r.json() : null;
+}
 
 const STAR_PATH = "M12 2 L14.6 9.2 L22 9.4 L16 14 L18.4 21.4 L12 16.9 L5.6 21.6 L8 14.1 L2 9.5 L9.4 9.1 Z";
 
@@ -28,18 +68,18 @@ function scatterStars(count) {
   }
 }
 
-const fmt = (v, d = 1) =>
-  v == null ? "–" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
-
-async function getJson(url) {
-  const r = await fetch(url);
-  return r.ok ? r.json() : null;
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   const page = document.body.dataset.page;
-  document.querySelectorAll(".nav a").forEach((a) => {
+  document.querySelectorAll(".nav a[data-page]").forEach((a) => {
     if (a.dataset.page === page) a.setAttribute("aria-current", "page");
   });
+  const switcher = document.querySelector(".lang-switch");
+  if (switcher) {
+    switcher.addEventListener("click", (e) => {
+      storeLang(document.documentElement.dataset.altLang);
+      // mantém a âncora (#formulas, #tempestade) ao trocar de idioma
+      if (location.hash) { e.preventDefault(); location.href = switcher.href + location.hash; }
+    });
+  }
   scatterStars(window.innerWidth < 600 ? 8 : 16);
 });

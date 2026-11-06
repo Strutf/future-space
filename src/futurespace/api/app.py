@@ -9,6 +9,7 @@ import csv
 import io
 import json
 import os
+import re
 import threading
 import time
 from collections import deque
@@ -52,22 +53,54 @@ Cite sempre a fonte original indicada em `provider` e `license`.
 WEB = Path(__file__).parent / "web"
 STATIC = WEB / "static"
 
-# Páginas do site: cada uma é o miolo em web/pages, encaixado no molde web/base.html.
-PAGES = {
-    "/": ("home", "Future Space"),
-    "/dashboard": ("dashboard", "Previsões · Future Space"),
-    "/sobre": ("sobre", "Sobre as previsões · Future Space"),
-    "/interativo": ("interativo", "Interativo · Future Space"),
+# Páginas do site: cada uma é o miolo em web/pages, encaixado no molde web/base.html, com os
+# textos vindos de web/locales/<idioma>.json. Cada idioma tem os próprios endereços.
+LANGS = ("pt", "en")
+PAGE_URLS = {
+    "home": {"pt": "/", "en": "/en"},
+    "dashboard": {"pt": "/dashboard", "en": "/en/dashboard"},
+    "sobre": {"pt": "/sobre", "en": "/en/about"},
+    "interativo": {"pt": "/interativo", "en": "/en/interactive"},
 }
+SITE_URL = "https://future-space-six.vercel.app"
+LOCALES = {lang: json.loads((WEB / "locales" / f"{lang}.json").read_text(encoding="utf-8")) for lang in LANGS}
 
 
-def _render_page(name: str, title: str) -> str:
-    base = (WEB / "base.html").read_text(encoding="utf-8")
-    content = (WEB / "pages" / f"{name}.html").read_text(encoding="utf-8")
-    return base.replace("{{title}}", title).replace("{{page}}", name).replace("{{content}}", content)
+def _lookup(locale: dict, key: str) -> str:
+    value = locale
+    for part in key.split("."):
+        value = value[part]  # KeyError aqui = chave faltando no arquivo de tradução
+    return value
 
 
-RENDERED_PAGES = {path: _render_page(name, title) for path, (name, title) in PAGES.items()}
+def render_page(name: str, lang: str) -> str:
+    alt = "en" if lang == "pt" else "pt"
+    html = (WEB / "base.html").read_text(encoding="utf-8").replace(
+        "{{content}}", (WEB / "pages" / f"{name}.html").read_text(encoding="utf-8")
+    )
+    locale = LOCALES[lang]
+    # Primeiro os textos (que podem conter {{url:...}}), depois os endereços.
+    html = re.sub(r"\{\{t:([\w.]+)\}\}", lambda m: _lookup(locale, m.group(1)), html)
+    html = re.sub(r"\{\{url:(\w+)\}\}", lambda m: PAGE_URLS[m.group(1)][lang], html)
+    js_texts = json.dumps(locale["js"], ensure_ascii=False).replace("</", "<\\/")
+    replacements = {
+        "{{title}}": locale["titles"][name],
+        "{{page}}": name,
+        "{{lang}}": lang,
+        "{{alt_lang}}": alt,
+        "{{alt_url}}": PAGE_URLS[name][alt],
+        "{{href_pt}}": SITE_URL + PAGE_URLS[name]["pt"],
+        "{{href_en}}": SITE_URL + PAGE_URLS[name]["en"],
+        "{{js_i18n}}": js_texts,
+    }
+    for placeholder, value in replacements.items():
+        html = html.replace(placeholder, value)
+    return html
+
+
+RENDERED_PAGES = {
+    urls[lang]: render_page(name, lang) for name, urls in PAGE_URLS.items() for lang in LANGS
+}
 
 # Datas aceitas nos filtros: cobre todo o histórico (Kp desde 1932) e evita estouros de calendário.
 MIN_TIME = datetime(1900, 1, 1, tzinfo=UTC)
