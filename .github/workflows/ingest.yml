@@ -2,14 +2,15 @@ name: ingest
 
 on:
   schedule:
-    # De hora em hora, no minuto 23: o início da hora é o horário mais congestionado do
-    # GitHub. Os endpoints de vento solar só guardam ~24h, então atrasos não perdem dados.
+    # De hora em hora, fora do início da hora (o horário mais congestionado do GitHub).
+    # O vento solar só fica ~24 h na fonte: mais de um dia sem coleta perde dados.
     - cron: "28 * * * *"
     # Uma vez por dia: fontes históricas com atraso (OMNI, Kp oficial do GFZ).
     - cron: "47 3 * * *"
   workflow_dispatch:
     inputs:
-      schedule:
+      # Não se chama "schedule" para não se confundir com o gatilho on.schedule.
+      modo:
         description: "realtime, daily ou all"
         type: choice
         options: [realtime, daily, all]
@@ -60,10 +61,10 @@ jobs:
         id: agenda
         env:
           EVENT_SCHEDULE: ${{ github.event.schedule }}
-          INPUT_SCHEDULE: ${{ inputs.schedule }}
+          INPUT_MODO: ${{ inputs.modo }}
         run: |
-          if [ -n "$INPUT_SCHEDULE" ]; then
-            echo "schedule=$INPUT_SCHEDULE" >> "$GITHUB_OUTPUT"
+          if [ -n "$INPUT_MODO" ]; then
+            echo "schedule=$INPUT_MODO" >> "$GITHUB_OUTPUT"
           elif [ "$EVENT_SCHEDULE" = "47 3 * * *" ]; then
             echo "schedule=daily" >> "$GITHUB_OUTPUT"
           else
