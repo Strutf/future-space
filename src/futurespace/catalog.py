@@ -369,6 +369,32 @@ DATASETS: tuple[Dataset, ...] = (
         latest_mode="snapshot",
     ),
     Dataset(
+        id="kp-forecast-3day",
+        title="Previsão oficial de Kp: arquivo do 3-Day Forecast (NOAA, desde 2022)",
+        description="Todas as edições do 3-Day Forecast da NOAA (00:30 e 12:30 UTC), com o Kp "
+        "previsto por bloco de 3 h. Permite comparar a NOAA com o Kp observado no histórico.",
+        stage="ground",
+        provider="NOAA SWPC, arquivo da NCEI",
+        source_url="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/3day_forecast/",
+        license=SWPC_LICENSE,
+        cadence="12h",
+        partition="month",
+        key=("time", "target_time"),
+        fields=(
+            _time("Publicação da previsão (UTC)"),
+            Field("target_time", "time", None, "Bloco de 3 h previsto (UTC)"),
+            Field("kp", "float", None, "Kp previsto"),
+            Field("noaa_scale", "str", None, "Escala G prevista (G1-G5), se houver"),
+        ),
+        schedule="daily",
+        update_days=5,
+        historical=True,
+        max_query_days=93,
+        default_days=3,
+        latest_mode="snapshot",
+        notes="A NCEI publica com cerca de um dia de atraso; as previsões do dia vêm de kp-forecast.",
+    ),
+    Dataset(
         id="dst",
         title="Índice Dst (Kyoto, 1 h)",
         description="Índice Dst em tempo quase real (WDC Kyoto, via NOAA). Mede a corrente de "

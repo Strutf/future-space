@@ -369,7 +369,9 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         return compare.build(
             # Previsões emitidas até 3 dias antes ainda podem valer para os blocos do período.
             load_records("predictions", start - timedelta(days=2), end),
-            load_records("kp-forecast", start - timedelta(days=4), end),
+            # Coletas de hora em hora + arquivo das edições oficiais (cobre dias antes da coleta).
+            load_records("kp-forecast", start - timedelta(days=4), end)
+            + load_records("kp-forecast-3day", start - timedelta(days=4), end),
             load_records("kp", start, end),
             load_records("kp-gfz", start, end),
             target_day,

@@ -169,6 +169,17 @@ sondas ali medem o vento solar **30 a 60 minutos antes** de ele chegar à Terra.
 - **Para que serve:** a fonte só mostra a previsão atual. Arquivando o histórico, conseguimos
   comparar de forma justa os modelos do projeto com a previsão oficial.
 
+#### `kp-forecast-3day`: Arquivo das previsões oficiais, desde 2022
+- **De onde vem:** o produto **3-Day Forecast** da NOAA SWPC, guardado pela NCEI.
+- **Endpoint:** `https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/3day_forecast/<ano>/<mês>/`
+- **O que traz:** todas as edições da previsão oficial (00:30 e 12:30 UTC), com o Kp esperado
+  em cada bloco de 3 h dos três dias seguintes e a escala G prevista. Só guardamos os blocos
+  que ainda não tinham começado na hora da publicação.
+- **Para que serve:** medir a NOAA contra o Kp que aconteceu e comparar com a IA no histórico.
+  Também completa o painel nos dias antes de a coleta horária existir.
+- **Cadência / histórico:** duas edições por dia / desde março de 2022, com cerca de 1 dia de
+  atraso. Setembro e outubro de 2022 não existem no arquivo.
+
 #### `dst`: Índice Dst
 - **De onde vem:** World Data Center for Geomagnetism, Kyoto (Japão), redistribuído pela
   NOAA SWPC.
@@ -218,6 +229,7 @@ sondas ali medem o vento solar **30 a 60 minutos antes** de ele chegar à Terra.
 | `goes-protons` | Órbita | NOAA SWPC / GOES | 5 min | a partir do início da coleta |
 | `kp` | Solo | NOAA SWPC | 3 h | a partir do início da coleta |
 | `kp-forecast` | Solo | NOAA SWPC | 3 h | a partir do início da coleta |
+| `kp-forecast-3day` | Solo | NOAA SWPC / NCEI | 12 h | **desde 2022** |
 | `dst` | Solo | WDC Kyoto | 1 h | a partir do início da coleta |
 | `kp-gfz` | Solo | GFZ Potsdam | 3 h | **desde 1932** |
 | `omni-hourly` | Todas | NASA OMNI | 1 h | **desde 1963** |
@@ -402,6 +414,26 @@ O que esses números dizem:
 - Escolher o limiar pelo TSS daria TSS maiores (até 0,98), mas com 60% a 95% de alarmes
   falsos. Por isso o projeto usa o HSS.
 
+### IA × NOAA no histórico (2022–2026)
+
+Usando o arquivo do 3-Day Forecast, comparamos as duas previsões com o Kp observado (GFZ) nos
+**mesmos blocos e com a mesma antecedência**. Para cada edição da NOAA, a IA usa só dados até
+a hora cheia anterior, com o modelo treinado até 2018, que nunca viu esse período.
+
+| Antecedência | Comparações | Erro médio IA | Erro médio NOAA | HSS do alerta IA | HSS NOAA |
+|---|---|---|---|---|---|
+| ~6 h | 2.534 | **0,72** | 1,16 | **0,40** | 0,24 |
+| ~12 h | 2.534 | **0,80** | 1,18 | **0,21** | 0,16 |
+| ~24 h | 2.534 | **0,90** | 1,16 | 0,08 | **0,16** |
+
+- No valor do Kp, a IA erra menos em todos os horizontes.
+- No alerta de tempestade, a IA ganha em 6 h e 12 h, e a NOAA em 24 h. A NOAA analisa imagens
+  do Sol e a direção das CMEs, o que dá vantagem nas antecedências maiores.
+- Sozinha, a NOAA erra ~1,15 de Kp em média, com 6 h ou 3 dias de antecedência, e cerca de 82%
+  dos alertas de G1 dela não se confirmaram.
+- **Ressalva:** nessa simulação, a IA usa o OMNI e o Kp definitivo, um pouco mais limpos que os
+  dados de tempo real. A verificação diária ao vivo confirma (ou não) essa vantagem.
+
 ### Limitações conhecidas
 
 - **O início de uma tempestade é difícil de prever.** Sem CMEs, o modelo só "vê" o vento
@@ -569,6 +601,10 @@ Configuração de cada job:
 - **Resposta esperada:** `204`
 - **Alerta:** ative o aviso por e-mail em caso de falha. Lembre de renovar o token antes de
   ele expirar.
+
+**Cargas históricas em produção:** em Actions → ingest → Run workflow, preencha `backfill`
+com o dataset (ex.: `kp-forecast-3day`) e `desde` com a data inicial. O workflow roda só a
+carga, com o token que já está nos secrets.
 
 O `on.schedule` continua no workflow, no minuto 53, como reserva. Se ele voltar a funcionar,
 os dois disparos convivem: um espera o outro, e os dados não duplicam.

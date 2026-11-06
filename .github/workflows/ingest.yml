@@ -16,6 +16,14 @@ on:
         type: choice
         options: [realtime, daily, all]
         default: realtime
+      backfill:
+        description: "Opcional: dataset para carregar o histórico (ex.: kp-forecast-3day). Se preenchido, roda só isso."
+        type: string
+        default: ""
+      desde:
+        description: "Data inicial do histórico (ex.: 2022-01-01)"
+        type: string
+        default: "2022-01-01"
 
 # O GITHUB_TOKEN deste workflow só pode ler o repositório.
 permissions:
@@ -75,16 +83,23 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SCHEDULE: ${{ steps.agenda.outputs.schedule }}
-        run: futurespace update --schedule "$SCHEDULE"
+          BACKFILL: ${{ inputs.backfill }}
+          DESDE: ${{ inputs.desde }}
+        run: |
+          if [ -n "$BACKFILL" ]; then
+            futurespace backfill "$BACKFILL" --start "$DESDE"
+          else
+            futurespace update --schedule "$SCHEDULE"
+          fi
       # Roda mesmo se alguma fonte falhou: os modelos lidam com dados faltantes.
       - name: Prever
-        if: ${{ !cancelled() && steps.agenda.outputs.schedule != 'daily' }}
+        if: ${{ !cancelled() && !inputs.backfill && steps.agenda.outputs.schedule != 'daily' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: futurespace predict
       # Uma vez por dia: compara as previsões passadas com o que aconteceu.
       - name: Verificar previsões
-        if: ${{ !cancelled() && steps.agenda.outputs.schedule != 'realtime' }}
+        if: ${{ !cancelled() && !inputs.backfill && steps.agenda.outputs.schedule != 'realtime' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: futurespace verify
