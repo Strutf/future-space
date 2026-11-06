@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import httpx
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -39,6 +40,10 @@ padronizados num formato comum: toda tabela tem uma coluna `time` em UTC.
 
 Cite sempre a fonte original indicada em `provider` e `license`.
 """
+
+# Datas aceitas nos filtros: cobre todo o histórico (Kp desde 1932) e evita estouros de calendário.
+MIN_TIME = datetime(1900, 1, 1, tzinfo=UTC)
+MAX_TIME = datetime(2100, 1, 1, tzinfo=UTC)
 
 
 class CachedStorage(Storage):
@@ -80,8 +85,20 @@ def create_app(storage: Storage | None = None) -> FastAPI:
     )
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        return response
+
     def read_json(key: str):
-        raw = store.read(key)
+        try:
+            raw = store.read(key)
+        except httpx.HTTPError:
+            # Não repassa detalhes internos (URLs, cabeçalhos) para quem chamou.
+            raise HTTPException(503, "armazenamento de dados indisponível; tente novamente em instantes") from None
         return json.loads(raw) if raw else None
 
     def dataset_or_404(dataset_id: str) -> catalog.Dataset:
@@ -92,9 +109,12 @@ def create_app(storage: Storage | None = None) -> FastAPI:
 
     def parse_or_400(value: str, name: str) -> datetime:
         try:
-            return parse_time(value)
+            dt = parse_time(value)
         except ValueError:
             raise HTTPException(400, f"'{name}' inválido: use ISO 8601, ex.: 2024-05-10T00:00Z") from None
+        if not MIN_TIME <= dt <= MAX_TIME:
+            raise HTTPException(400, f"'{name}' fora do intervalo aceito ({MIN_TIME.year} a {MAX_TIME.year})")
+        return dt
 
     @app.get("/", include_in_schema=False)
     def root():

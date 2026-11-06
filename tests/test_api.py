@@ -1,3 +1,4 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -79,3 +80,29 @@ def test_unknown_and_empty_datasets(client):
 def test_latest(client):
     body = client.get("/v1/datasets/kp/latest").json()
     assert body["data"][0]["time"] == "2026-11-06T00:00:00Z"
+
+
+@pytest.mark.parametrize("value", ["9999-01-01", "0001-01-01"])
+def test_dates_outside_supported_range_are_rejected(client, value):
+    resp = client.get("/v1/datasets/kp/data", params={"start": value, "end": value})
+    assert resp.status_code == 400
+    assert "fora do intervalo" in resp.json()["detail"]
+
+
+def test_security_headers(client):
+    headers = client.get("/v1/datasets/kp/latest").headers
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["x-frame-options"] == "DENY"
+
+
+def test_storage_outage_returns_503_without_internal_details():
+    from futurespace.storage import HttpStorage
+
+    def offline(request):
+        raise httpx.ConnectError("sem rede", request=request)
+
+    storage = HttpStorage("https://exemplo.invalid/segredo")
+    storage.client = httpx.Client(transport=httpx.MockTransport(offline))
+    resp = TestClient(create_app(storage)).get("/v1/datasets/kp/latest")
+    assert resp.status_code == 503
+    assert "exemplo.invalid" not in resp.text
