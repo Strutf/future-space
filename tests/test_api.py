@@ -141,8 +141,13 @@ def test_language_menu_points_to_same_page(client, path, pt, en, current):
 
 
 def test_english_pages_have_no_portuguese_leftovers(client):
+    import re
+
     for path in ("/en", "/en/dashboard", "/en/about", "/en/interactive"):
         text = client.get(path).text.lower()
+        # Comentários de código/HTML não aparecem para o visitante e seguem o idioma do repositório.
+        text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+        text = re.sub(r"^\s*//.*$", "", text, flags=re.MULTILINE)
         for word in ("tempestade", "previsões", "ontem", "chegada", "agora", "a gente"):
             assert word not in text, (path, word)
 
