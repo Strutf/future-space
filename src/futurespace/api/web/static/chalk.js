@@ -73,13 +73,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".nav a[data-page]").forEach((a) => {
     if (a.dataset.page === page) a.setAttribute("aria-current", "page");
   });
-  const switcher = document.querySelector(".lang-switch");
-  if (switcher) {
-    switcher.addEventListener("click", (e) => {
-      storeLang(document.documentElement.dataset.altLang);
-      // mantém a âncora (#formulas, #tempestade) ao trocar de idioma
-      if (location.hash) { e.preventDefault(); location.href = switcher.href + location.hash; }
+  const menu = document.querySelector(".lang-menu");
+  if (menu) {
+    menu.querySelectorAll("a[data-lang]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        storeLang(a.dataset.lang);
+        // mantém a âncora (#formulas, #storm) ao trocar de idioma
+        if (location.hash) { e.preventDefault(); location.href = a.href + location.hash; }
+      });
     });
+    // fecha ao clicar fora ou apertar Esc
+    document.addEventListener("click", (e) => { if (!menu.contains(e.target)) menu.open = false; });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); } });
   }
   scatterStars(window.innerWidth < 600 ? 8 : 16);
 });

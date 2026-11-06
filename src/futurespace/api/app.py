@@ -100,6 +100,10 @@ def render_page(name: str, lang: str) -> str:
         "{{alt_url}}": PAGE_URLS[name][alt],
         "{{href_pt}}": SITE_URL + PAGE_URLS[name]["pt"],
         "{{href_en}}": SITE_URL + PAGE_URLS[name]["en"],
+        "{{path_pt}}": PAGE_URLS[name]["pt"],
+        "{{path_en}}": PAGE_URLS[name]["en"],
+        "{{current_pt}}": 'aria-current="true"' if lang == "pt" else "",
+        "{{current_en}}": 'aria-current="true"' if lang == "en" else "",
         "{{js_i18n}}": js_texts,
     }
     for placeholder, value in replacements.items():

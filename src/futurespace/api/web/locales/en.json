@@ -15,8 +15,8 @@
     "dashboard": "Forecasts",
     "sobre": "About the forecasts",
     "interativo": "Interactive",
-    "switch": "Português",
-    "switch_aria": "Ler esta página em português"
+    "lang_label": "Choose language",
+    "lang_name": "English"
   },
   "footer": {
     "disclaimer": "Experimental forecasts, made for learning and following along. For serious decisions, check <a href=\"https://www.swpc.noaa.gov/\" rel=\"noopener\">NOAA SWPC</a>.",
@@ -48,9 +48,9 @@
     "summary_aria": "Summary",
     "tile_winner": "Yesterday: who got closer?",
     "tile_storm": "Was there a storm yesterday?",
-    "tile_ia": "AI: Kp in the next 3 h",
+    "tile_ia": "AI: next block",
     "tile_noaa": "NOAA: next block",
-    "chart_title": "Kp every 3 hours: yesterday and today",
+    "chart_title": "Kp every 3 hours: yesterday, today and tomorrow",
     "chart_hint": "Each one shows the last forecast it made before the block started. Times in UTC. <a href=\"{{url:sobre}}#formulas\">See the formulas</a>.",
     "legend_observed": "What happened",
     "legend_ia": "Future Space AI",
@@ -179,9 +179,7 @@
     "storm_forecast": "forecast: AI {ia}, NOAA {noaa}",
     "yes": "yes",
     "no": "no",
-    "ia_sub": "chance of a storm within 24 h: {pct}%",
     "ia_none": "the AI hasn't published forecasts yet",
-    "noaa_sub": "{hour} UTC block ({when})",
     "noaa_storm": " · {scale} storm",
     "noaa_none": "no archived NOAA forecast",
     "today": "today",
@@ -205,6 +203,10 @@
     "closest_tie": "tie",
     "updated": "Updated at {time} (local time)",
     "model": " · model {version}",
-    "load_error": "Couldn't load right now. Trying again in a bit."
+    "load_error": "Couldn't load right now. Trying again in a bit.",
+    "block_at": "{hour} UTC block ({when})",
+    "ia_chance": " · chance of a storm: {pct}%",
+    "tomorrow": "tomorrow",
+    "tomorrow_label": "Tomorrow"
   }
 }

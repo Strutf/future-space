@@ -476,7 +476,7 @@ molde em `src/futurespace/api/web/pages`, encaixado em `web/base.html`, e o tema
 | Página | Português | Inglês | O que mostra |
 |---|---|---|---|
 | Home | `/` | `/en` | O que o projeto faz, como funciona e a previsão do momento |
-| Previsões | `/dashboard` | `/en/dashboard` | Kp previsto pela IA e pela NOAA para ontem e hoje, com o observado e quem chegou mais perto |
+| Previsões | `/dashboard` | `/en/dashboard` | Kp previsto pela IA e pela NOAA para ontem, hoje e amanhã, com o observado e quem chegou mais perto |
 | Sobre | `/sobre` | `/en/about` | Como acontece uma tempestade solar, o que são Kp, Dst e CME, e todas as fórmulas |
 | Interativo | `/interativo` | `/en/interactive` | Em breve |
 
@@ -484,7 +484,7 @@ molde em `src/futurespace/api/web/pages`, encaixado em `web/base.html`, e o tema
 - Nas páginas, os textos aparecem como `{{t:secao.chave}}` e os links internos como
   `{{url:pagina}}`. O servidor monta as duas versões ao iniciar.
 - Os textos usados pelo JavaScript ficam na seção `js` e são acessados com `t("chave", {variavel})`.
-- O botão de idioma do menu leva à mesma página na outra língua e lembra a escolha. Na
+- O seletor de idioma do menu (globinho) leva à mesma página na outra língua e lembra a escolha. Na
   primeira visita, navegadores que não estão em português vão para a versão em inglês.
 - Os testes garantem que os dois arquivos têm as mesmas chaves e as mesmas variáveis.
 

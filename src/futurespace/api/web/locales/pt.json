@@ -15,8 +15,8 @@
     "dashboard": "Previsões",
     "sobre": "Sobre as previsões",
     "interativo": "Interativo",
-    "switch": "English",
-    "switch_aria": "Read this page in English"
+    "lang_label": "Escolher idioma",
+    "lang_name": "Português"
   },
   "footer": {
     "disclaimer": "Previsões experimentais, feitas para aprender e acompanhar. Para decisões sérias, consulte a <a href=\"https://www.swpc.noaa.gov/\" rel=\"noopener\">NOAA SWPC</a>.",
@@ -48,9 +48,9 @@
     "summary_aria": "Resumo",
     "tile_winner": "Ontem: quem chegou mais perto?",
     "tile_storm": "Teve tempestade ontem?",
-    "tile_ia": "IA: Kp nas próximas 3 h",
+    "tile_ia": "IA: próximo bloco",
     "tile_noaa": "NOAA: próximo bloco",
-    "chart_title": "Kp de 3 em 3 horas: ontem e hoje",
+    "chart_title": "Kp de 3 em 3 horas: ontem, hoje e amanhã",
     "chart_hint": "Cada um aparece com a última previsão que fez antes de o bloco começar. Horários em UTC (Brasília = UTC−3). <a href=\"{{url:sobre}}#formulas\">Ver as fórmulas</a>.",
     "legend_observed": "O que aconteceu",
     "legend_ia": "IA Future Space",
@@ -179,9 +179,7 @@
     "storm_forecast": "previu: IA {ia}, NOAA {noaa}",
     "yes": "sim",
     "no": "não",
-    "ia_sub": "chance de tempestade em até 24 h: {pct}%",
     "ia_none": "a IA ainda não publicou previsões",
-    "noaa_sub": "bloco das {hour} UTC ({when})",
     "noaa_storm": " · tempestade {scale}",
     "noaa_none": "sem previsão da NOAA arquivada",
     "today": "hoje",
@@ -205,6 +203,10 @@
     "closest_tie": "empate",
     "updated": "Atualizado às {time} (horário local)",
     "model": " · modelo {version}",
-    "load_error": "Não deu para carregar agora. Tentando de novo daqui a pouco."
+    "load_error": "Não deu para carregar agora. Tentando de novo daqui a pouco.",
+    "block_at": "bloco das {hour} UTC ({when})",
+    "ia_chance": " · chance de tempestade: {pct}%",
+    "tomorrow": "amanhã",
+    "tomorrow_label": "Amanhã"
   }
 }

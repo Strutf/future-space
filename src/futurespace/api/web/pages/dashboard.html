@@ -83,7 +83,7 @@ function setTile(id, value, sub, status) {
   document.getElementById(id + "-sub").textContent = sub || "";
 }
 
-function renderTiles(cmp, latest) {
+function renderTiles(cmp) {
   const [yesterday] = cmp.days;
   const s = yesterday.summary;
   if (s.winner) {
@@ -100,19 +100,19 @@ function renderTiles(cmp, latest) {
     t("storm_forecast", { ia: yes(s.storm_forecast_ia), noaa: yes(s.storm_forecast_noaa) }),
     observed.length ? (s.storm_observed ? "critical" : "good") : null);
 
-  const kp3 = latest && latest.data.find((r) => r.target === "kp" && r.horizon_hours === 3);
-  if (kp3) {
-    const p24 = Math.max(...latest.data.filter((r) => r.target === "kp").map((r) => r.storm_probability));
-    setTile("t-ia", fmt(kp3.value), t("ia_sub", { pct: fmt(100 * p24, 0) }), kp3.storm_alert ? "critical" : null);
+  // IA e NOAA mostradas para o mesmo bloco: o próximo que ainda não começou.
+  const next = cmp.next;
+  const when = next && (next.block.slice(0, 10) === cmp.generated_at.slice(0, 10) ? t("today") : t("tomorrow"));
+  const where = next && t("block_at", { hour: hour(next.block), when });
+  if (next && next.ia) {
+    setTile("t-ia", fmt(next.ia.value), where + t("ia_chance", { pct: fmt(100 * next.ia.probability, 0) }),
+      next.ia.alert ? "critical" : null);
   } else {
     setTile("t-ia", "–", t("ia_none"));
   }
-
-  const next = cmp.noaa_next;
-  if (next) {
-    const when = next.block.slice(0, 10) === cmp.generated_at.slice(0, 10) ? t("today") : dayLabel(next.block);
-    setTile("t-noaa", fmt(next.value), t("noaa_sub", { hour: hour(next.block), when }) + (next.scale ? t("noaa_storm", { scale: next.scale }) : ""),
-      next.value >= cmp.storm_threshold ? "critical" : null);
+  if (next && next.noaa) {
+    setTile("t-noaa", fmt(next.noaa.value), where + (next.noaa.scale ? t("noaa_storm", { scale: next.noaa.scale }) : ""),
+      next.noaa.value >= cmp.storm_threshold ? "critical" : null);
   } else {
     setTile("t-noaa", "–", t("noaa_none"));
   }
@@ -160,7 +160,8 @@ function renderChart(cmp) {
   cmp.days.forEach((d, i) => {
     const x0 = x(i * 8);
     if (i) add("line", { x1: x0, x2: x0, y1: m.top - 24, y2: H - m.bottom, stroke: "rgba(241,239,231,0.4)", "stroke-width": 2, "stroke-dasharray": "6 6" }, null, chalk);
-    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(i ? "today_label" : "yesterday_label") + " " + dayLabel(d.blocks[0].block));
+    const name = ["yesterday_label", "today_label", "tomorrow_label"][i];
+    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(name) + " " + dayLabel(d.blocks[0].block));
   });
 
   blocks.forEach((b, i) => {
@@ -230,7 +231,7 @@ async function load() {
     const [cmp, latest] = await Promise.all([getJson("/v1/compare/kp"), getJson("/v1/datasets/predictions/latest")]);
     if (!cmp) throw new Error("sem dados");
     lastCmp = cmp;
-    renderTiles(cmp, latest);
+    renderTiles(cmp);
     renderChart(cmp);
     renderTable(cmp);
     const updated = new Date(cmp.generated_at);

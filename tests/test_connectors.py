@@ -32,16 +32,18 @@ def test_goes_xray_pivots_bands():
     ]
 
 
-def test_kp_forecast_keeps_only_predictions_stamped_with_fetch_hour():
+def test_kp_forecast_keeps_future_blocks_stamped_with_fetch_hour():
     rows = [
         {"time_tag": "2026-11-06T00:00:00", "kp": 2.0, "observed": "observed", "noaa_scale": None},
+        {"time_tag": "2026-11-06T18:00:00", "kp": 3.0, "observed": "estimated", "noaa_scale": None},  # em andamento
+        {"time_tag": "2026-11-06T21:00:00", "kp": 4.67, "observed": "estimated", "noaa_scale": "G1"},  # ainda não começou
         {"time_tag": "2026-11-08T00:00:00", "kp": 5.0, "observed": "predicted", "noaa_scale": "G1"},
     ]
     with client_for({"/products/noaa-planetary-k-index-forecast.json": rows}) as c:
         df = swpc.kp_forecast(c, START, datetime(2026, 11, 6, 19, 42, tzinfo=UTC))
-    assert len(df) == 1
-    assert str(df.iloc[0]["time"]) == "2026-11-06 19:00:00+00:00"
-    assert df.iloc[0]["noaa_scale"] == "G1"
+    assert df["target_time"].tolist() == ["2026-11-06T21:00:00", "2026-11-08T00:00:00"]
+    assert (df["time"].astype(str) == "2026-11-06 19:00:00+00:00").all()
+    assert df["noaa_scale"].tolist() == ["G1", "G1"]
 
 
 def test_omni_orders_parameters_and_masks_fill_values():

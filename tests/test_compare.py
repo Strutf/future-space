@@ -57,16 +57,18 @@ def test_winner_and_future_blocks():
     assert today[3]["observed"] is None  # bloco 9h-12h ainda em andamento às 10h30
 
 
-def test_noaa_next_block_can_be_tomorrow():
+def test_next_block_shows_both_sources_for_the_same_block():
+    block = "2026-11-07T12:00:00Z"  # às 10h30 o bloco 9h-12h está em andamento; o próximo é o das 12h
     result = compare.build(
-        predictions=[],
+        predictions=[pred("2026-11-07T10:00:00Z", block, 2.3)],
         noaa_forecasts=[
-            {"time": "2026-11-07T09:00:00Z", "target_time": "2026-11-08T00:00:00Z", "kp": 5.0, "noaa_scale": "G1"},
-            {"time": "2026-11-07T09:00:00Z", "target_time": "2026-11-08T03:00:00Z", "kp": 4.0},
-            {"time": "2026-11-07T08:00:00Z", "target_time": "2026-11-07T21:00:00Z", "kp": 3.0},  # emissão antiga
+            {"time": "2026-11-07T09:00:00Z", "target_time": block, "kp": 5.0, "noaa_scale": "G1"},
+            {"time": "2026-11-07T08:00:00Z", "target_time": block, "kp": 3.0},  # emissão antiga
         ],
         kp_noaa=[], kp_gfz=[], day=date(2026, 11, 7), now=NOW,
     )
-    assert result["noaa_next"] == {
-        "block": "2026-11-08T00:00:00Z", "value": 5.0, "scale": "G1", "issued": "2026-11-07T09:00:00Z",
-    }
+    nxt = result["next"]
+    assert nxt["block"] == block
+    assert nxt["ia"]["value"] == 2.3
+    assert (nxt["noaa"]["value"], nxt["noaa"]["scale"]) == (5.0, "G1")
+    assert [d["summary"]["date"] for d in result["days"]] == ["2026-11-06", "2026-11-07", "2026-11-08"]

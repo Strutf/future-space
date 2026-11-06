@@ -127,9 +127,17 @@ def test_site_pages(client, path, marker, lang):
     assert "{{" not in page.text  # molde e traduções todos preenchidos
 
 
-@pytest.mark.parametrize("path, other", [("/sobre", "/en/about"), ("/en/about", "/sobre"), ("/", "/en")])
-def test_language_switch_points_to_same_page(client, path, other):
-    assert f'class="lang-switch" href="{other}"' in client.get(path).text
+@pytest.mark.parametrize("path, pt, en, current", [
+    ("/sobre", "/sobre", "/en/about", "pt"),
+    ("/en/about", "/sobre", "/en/about", "en"),
+    ("/", "/", "/en", "pt"),
+])
+def test_language_menu_points_to_same_page(client, path, pt, en, current):
+    html = client.get(path).text
+    assert f'<a href="{pt}" lang="pt-BR" hreflang="pt-BR" data-lang="pt"' in html
+    assert f'<a href="{en}" lang="en" hreflang="en" data-lang="en"' in html
+    assert html.count('aria-current="true"') == 1
+    assert f'data-lang="{current}" role="listitem" aria-current="true"' in html
 
 
 def test_english_pages_have_no_portuguese_leftovers(client):
@@ -148,7 +156,7 @@ def test_static_files_and_traversal(client):
 
 def test_compare_endpoint_without_predictions(client):
     body = client.get("/v1/compare/kp", params={"date": "2026-11-06"}).json()
-    assert [d["summary"]["date"] for d in body["days"]] == ["2026-11-05", "2026-11-06"]
+    assert [d["summary"]["date"] for d in body["days"]] == ["2026-11-05", "2026-11-06", "2026-11-07"]
     assert all(b["ia"] is None for d in body["days"] for b in d["blocks"])
 
 

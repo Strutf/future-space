@@ -71,7 +71,8 @@ def build(
 
     now_s = format_time(now)
     days = []
-    for d in (day - timedelta(days=1), day):
+    # Ontem e hoje para comparar com o observado; amanhã para ver as previsões que vêm por aí.
+    for d in (day - timedelta(days=1), day, day + timedelta(days=1)):
         start = datetime(d.year, d.month, d.day, tzinfo=now.tzinfo)
         blocks = []
         for i in range(8):
@@ -98,27 +99,11 @@ def build(
                 }
             )
         days.append({"summary": _day_summary(d, blocks), "blocks": blocks})
+    # Próximo bloco: o primeiro que ainda não começou. IA e NOAA são mostradas para o MESMO bloco.
+    upcoming = [b for d in days for b in d["blocks"] if b["block"] > now_s]
     return {
         "generated_at": now_s,
         "storm_threshold": KP_STORM,
         "days": days,
-        "noaa_next": _noaa_next(noaa_forecasts, now),
+        "next": upcoming[0] if upcoming else None,
     }
-
-
-def _noaa_next(noaa_forecasts: list[dict], now: datetime) -> dict | None:
-    """Próximo bloco previsto na última emissão da NOAA, mesmo que seja amanhã."""
-    now_s = format_time(now)
-    issued = [r for r in noaa_forecasts if r["time"] <= now_s]
-    if not issued:
-        return None
-    last = max(r["time"] for r in issued)
-    current_block = format_time(now.replace(hour=now.hour - now.hour % 3, minute=0, second=0, microsecond=0))
-    upcoming = sorted(
-        (r for r in issued if r["time"] == last and r["target_time"] >= current_block),
-        key=lambda r: r["target_time"],
-    )
-    if not upcoming:
-        return None
-    r = upcoming[0]
-    return {"block": r["target_time"], "value": r["kp"], "scale": r.get("noaa_scale"), "issued": r["time"]}

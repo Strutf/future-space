@@ -131,11 +131,18 @@ def kp(client: httpx.Client, start: datetime, end: datetime) -> pd.DataFrame:
 
 
 def kp_forecast(client: httpx.Client, start: datetime, end: datetime) -> pd.DataFrame:
-    """Guarda só os valores previstos, carimbados com a hora da coleta (`end`)."""
+    """Guarda as previsões de blocos que ainda não começaram, carimbadas com a hora da coleta.
+
+    A NOAA marca os blocos restantes do dia corrente como "estimated" e só os dias seguintes
+    como "predicted". Para um bloco que ainda não começou, os dois são previsão de verdade.
+    O bloco em andamento fica de fora: ali o "estimated" já é medição parcial.
+    """
     df = _frame(client, "products/noaa-planetary-k-index-forecast.json")
-    df = df[df["observed"] == "predicted"]
-    out = _select(df, {"time_tag": "target_time", "kp": "kp", "noaa_scale": "noaa_scale"})
-    out.insert(0, "time", pd.Timestamp(end).floor("h"))
+    fetched = pd.Timestamp(end)
+    block_start = pd.to_datetime(df["time_tag"], utc=True)
+    future = df["observed"].isin(["predicted", "estimated"]) & (block_start > fetched)
+    out = _select(df[future], {"time_tag": "target_time", "kp": "kp", "noaa_scale": "noaa_scale"})
+    out.insert(0, "time", fetched.floor("h"))
     return out
 
 
