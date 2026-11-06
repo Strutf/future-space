@@ -2,9 +2,10 @@ name: ingest
 
 on:
   schedule:
-    # De hora em hora, fora do início da hora (o horário mais congestionado do GitHub).
-    # O vento solar só fica ~24 h na fonte: mais de um dia sem coleta perde dados.
-    - cron: "*/5 * * * *"  # TEMPORÁRIO até o agendamento disparar; depois voltar para de hora em hora
+    # Reserva: o disparador principal é externo (cron-job.org, minuto 23 de cada hora,
+    # via API workflow_dispatch), porque o agendamento do GitHub não dispara neste
+    # repositório. O vento solar só fica ~24 h na fonte: mais de um dia sem coleta perde dados.
+    - cron: "53 * * * *"
     # Uma vez por dia: fontes históricas com atraso (OMNI, Kp oficial do GFZ).
     - cron: "47 3 * * *"
   workflow_dispatch:
