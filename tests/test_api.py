@@ -112,19 +112,31 @@ def test_storage_outage_returns_503_without_internal_details():
     ("/", "O que nós fazemos", "pt-BR"),
     ("/dashboard", "/v1/compare/kp", "pt-BR"),
     ("/sobre", "Como acontece uma tempestade solar", "pt-BR"),
-    ("/interativo", "Em breve", "pt-BR"),
+    ("/interativo", "Parquinho do espaço", "pt-BR"),
+    ("/interativo/tempestade", "Lance sua tempestade", "pt-BR"),
+    ("/interativo/viagem-no-tempo", "Viagem no tempo", "pt-BR"),
+    ("/interativo/aurora", "Onde dá para ver aurora?", "pt-BR"),
     ("/en", "What we do", "en"),
     ("/en/dashboard", "/v1/compare/kp", "en"),
     ("/en/about", "How a solar storm happens", "en"),
-    ("/en/interactive", "Coming soon", "en"),
+    ("/en/interactive", "Space playground", "en"),
+    ("/en/interactive/storm", "Launch your storm", "en"),
+    ("/en/interactive/time-travel", "Time travel", "en"),
+    ("/en/interactive/aurora", "Where can you see auroras?", "en"),
     ("/es", "Qué hacemos", "es"),
     ("/es/dashboard", "/v1/compare/kp", "es"),
     ("/es/acerca", "Cómo ocurre una tormenta solar", "es"),
-    ("/es/interactivo", "Muy pronto", "es"),
+    ("/es/interactivo", "Parque del espacio", "es"),
+    ("/es/interactivo/tormenta", "Lanza tu tormenta", "es"),
+    ("/es/interactivo/viaje-en-el-tiempo", "Viaje en el tiempo", "es"),
+    ("/es/interactivo/aurora", "¿Dónde se ven auroras?", "es"),
     ("/fr", "Ce que nous faisons", "fr"),
     ("/fr/dashboard", "/v1/compare/kp", "fr"),
     ("/fr/a-propos", "Comment se forme une tempête solaire", "fr"),
-    ("/fr/interactif", "Bientôt", "fr"),
+    ("/fr/interactif", "Terrain de jeu spatial", "fr"),
+    ("/fr/interactif/tempete", "Lance ta tempête", "fr"),
+    ("/fr/interactif/voyage-dans-le-temps", "Voyage dans le temps", "fr"),
+    ("/fr/interactif/aurore", "Où voir des aurores ?", "fr"),
 ])
 def test_site_pages(client, path, marker, lang):
     page = client.get(path)
@@ -216,3 +228,15 @@ def test_static_files_are_versioned_by_content(client):
     assert "immutable" in fresh.headers["cache-control"]
     stale = client.get("/static/chalk.js?v=versao-antiga")
     assert "immutable" not in stale.headers["cache-control"]
+
+
+def test_interactive_subpages_highlight_the_interactive_menu_and_load_versioned_data(client):
+    from futurespace.api.app import STATIC_VERSIONS
+
+    html = client.get("/interativo/tempestade").text
+    assert 'data-section="interativo"' in html
+    assert f"/static/sim-model.json?v={STATIC_VERSIONS['sim-model.json']}" in html
+    assert f"/static/replays.json?v={STATIC_VERSIONS['replays.json']}" in client.get("/en/interactive/time-travel").text
+    assert f"/static/world-land.json?v={STATIC_VERSIONS['world-land.json']}" in client.get("/fr/interactif/aurore").text
+    data = client.get(f"/static/sim-model.json?v={STATIC_VERSIONS['sim-model.json']}")
+    assert data.headers["content-type"].startswith("application/json")

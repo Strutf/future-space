@@ -510,7 +510,22 @@ molde em `src/futurespace/api/web/pages`, encaixado em `web/base.html`, e o tema
 | Home | `/` | `/en` | `/es` | `/fr` | O que o projeto faz, como funciona e a previsão do momento |
 | Previsões | `/dashboard` | `/en/dashboard` | `/es/dashboard` | `/fr/dashboard` | Três abas: Kp (padrão; IA × NOAA × observado), chance de tempestade da IA e Dst hora a hora, para ontem, hoje e amanhã |
 | Sobre | `/sobre` | `/en/about` | `/es/acerca` | `/fr/a-propos` | Como acontece uma tempestade solar, o que são Kp, Dst e CME, e todas as fórmulas |
-| Interativo | `/interativo` | `/en/interactive` | `/es/interactivo` | `/fr/interactif` | Em breve |
+| Interativo | `/interativo` | `/en/interactive` | `/es/interactivo` | `/fr/interactif` | Parquinho do espaço, com três brincadeiras: |
+| ↳ Simulador | `/interativo/tempestade` | `/en/interactive/storm` | `/es/interactivo/tormenta` | `/fr/interactif/tempete` | "Lance sua tempestade": monte uma CME e veja a IA calcular Kp e Dst |
+| ↳ Viagem no tempo | `/interativo/viagem-no-tempo` | `/en/interactive/time-travel` | `/es/interactivo/viaje-en-el-tiempo` | `/fr/interactif/voyage-dans-le-temps` | Maio de 2024, 2015, 2003 e 1989 hora a hora, com o que a IA teria previsto |
+| ↳ Aurora | `/interativo/aurora` | `/en/interactive/aurora` | `/es/interactivo/aurora` | `/fr/interactif/aurore` | Mapa com o anel da aurora para cada Kp e a visibilidade em cada cidade |
+
+**Parte interativa, sem servidor:** as três brincadeiras rodam no navegador, a partir de
+arquivos estáticos gerados com `futurespace export-web --bundle <modelos treinados até 2018>`:
+- `sim-model.json`: modelo enxuto do simulador (velocidade, densidade e VBs, médias de 6 h),
+  com restrições monotônicas para respeitar a física. As árvores do scikit-learn são
+  exportadas para JSON e avaliadas em JavaScript; um teste garante que o resultado é igual.
+- `replays.json`: as tempestades históricas e as previsões da IA 3 h antes.
+- `world-land.json`: contornos dos continentes (Natural Earth, domínio público).
+
+O mapa da aurora usa um dipolo para a latitude magnética e uma regra calibrada nos mapas da
+NOAA (linha de visibilidade ≈ 66° − 1,5° × Kp). É uma aproximação: ela erra mais perto da
+Austrália, onde o campo real foge do dipolo.
 
 **Traduções:** todo o texto fica em `web/locales/` (`pt.json`, `en.json`, `es.json`, `fr.json`).
 - Nas páginas, os textos aparecem como `{{t:secao.chave}}` e os links internos como

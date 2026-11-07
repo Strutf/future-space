@@ -217,6 +217,28 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_export_web(args: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    import joblib
+
+    from futurespace import storage as storage_mod
+    from futurespace.ml.export_web import build_replays, train_simulator
+    from futurespace.ml.features import hourly_from_history, load_dataset
+
+    store = storage_mod.from_env()
+    hourly = hourly_from_history(load_dataset(store, "omni-hourly"), load_dataset(store, "kp-gfz"))
+    out = Path(__file__).parent / "api" / "web" / "static"
+    sim = train_simulator(hourly)
+    (out / "sim-model.json").write_text(json.dumps(sim, separators=(",", ":")))
+    replays = build_replays(hourly, load_dataset(store, "cme-cactus"), joblib.load(args.bundle))
+    (out / "replays.json").write_text(json.dumps(replays, separators=(",", ":"), ensure_ascii=False))
+    for name in ("sim-model.json", "replays.json"):
+        log.info("%s: %.0f KB", name, (out / name).stat().st_size / 1024)
+    return 0
+
+
 def cmd_datasets(args: argparse.Namespace) -> int:
     for ds in catalog.DATASETS:
         print(f"{ds.id:<20} {ds.schedule:<9} {ds.cadence:<6} {ds.title}")
@@ -268,6 +290,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("predict", help="emite as previsões com os dados mais recentes")
     p.set_defaults(func=cmd_predict)
+
+    p = sub.add_parser("export-web", help="gera os arquivos da parte interativa do site")
+    p.add_argument("--bundle", default="models/bundle.joblib",
+                   help="modelos para a Viagem no tempo (de preferência treinados só até 2018)")
+    p.set_defaults(func=cmd_export_web)
 
     p = sub.add_parser("datasets", help="lista os datasets do catálogo")
     p.set_defaults(func=cmd_datasets)

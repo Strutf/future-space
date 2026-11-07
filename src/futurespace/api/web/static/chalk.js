@@ -72,9 +72,9 @@ function scatterStars(count) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const page = document.body.dataset.page;
+  const section = document.body.dataset.section;
   document.querySelectorAll(".nav a[data-page]").forEach((a) => {
-    if (a.dataset.page === page) a.setAttribute("aria-current", "page");
+    if (a.dataset.page === section) a.setAttribute("aria-current", "page");
   });
   const menu = document.querySelector(".lang-menu");
   if (menu) {

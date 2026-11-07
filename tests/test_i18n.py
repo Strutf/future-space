@@ -47,8 +47,17 @@ def test_locale_values_keep_the_same_placeholders():
 def test_every_js_text_used_in_pages_exists():
     used = set()
     for page in (WEB / "pages").glob("*.html"):
-        used |= set(re.findall(r'\bt\("(\w+)"', page.read_text(encoding="utf-8")))
+        used |= set(re.findall(r'\bt\("(\w+)"\s*[,)]', page.read_text(encoding="utf-8")))
         used |= set(re.findall(r'"(th_\w+)"', page.read_text(encoding="utf-8")))
     for lang in LANGS:
         missing = used - set(load(lang)["js"])
+        assert not missing, (lang, missing)
+
+
+def test_dynamic_keys_exist_for_every_event_and_storm_level():
+    dynamic = {f"sim_effect_g{g}" for g in range(6)}
+    for event in ("may2024", "stpatrick2015", "halloween2003", "quebec1989"):
+        dynamic |= {f"tt_title_{event}", f"tt_story_{event}"}
+    for lang in LANGS:
+        missing = dynamic - set(load(lang)["js"])
         assert not missing, (lang, missing)

@@ -1,0 +1,256 @@
+<style>
+  .sim-head { text-align: center; padding: 32px 0 8px; }
+  .sim-head h1 { font-size: clamp(36px, 7vw, 64px); transform: rotate(-1.5deg); }
+  .sim-head p { color: var(--chalk-soft); max-width: 680px; margin: 10px auto 0; }
+  .sim { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 28px; margin-top: 28px; align-items: start; }
+  @media (max-width: 860px) { .sim { grid-template-columns: 1fr; } }
+  .control { margin-bottom: 18px; }
+  .control label { display: flex; justify-content: space-between; gap: 8px; font-size: 19px; }
+  .control label b { font-family: var(--marker); font-weight: 400; color: var(--chalk-yellow); white-space: nowrap; }
+  .control small { display: block; color: var(--chalk-muted); font-size: 15px; }
+  .control input[type="range"] { width: 100%; accent-color: var(--chalk-yellow); margin: 6px 0 0; }
+  .scale { display: flex; justify-content: space-between; font-size: 14px; color: var(--chalk-muted); }
+  .aim { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0 0 18px; }
+  .aim legend { font-size: 19px; margin-bottom: 6px; padding: 0; }
+  .aim label { cursor: pointer; }
+  .aim input { position: absolute; opacity: 0; }
+  .aim span {
+    display: inline-block; padding: 3px 12px; border: 2px solid var(--chalk-line); color: var(--chalk-soft);
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+  .aim input:checked + span { color: var(--board); background: var(--chalk-blue); border-color: var(--chalk-blue); }
+  .aim input:focus-visible + span { outline: 2px dashed var(--chalk-yellow); outline-offset: 2px; }
+  .travel-info { font-size: 17px; color: var(--chalk-soft); margin: 4px 0 16px; }
+  .travel-info b { color: var(--chalk); font-weight: 400; font-family: var(--marker); }
+  .launch { width: 100%; font-size: 24px; border: 0; cursor: pointer; }
+  .launch:disabled { opacity: 0.6; cursor: progress; }
+  .stage svg { width: 100%; height: auto; display: block; }
+  .stage text { font-family: var(--hand); fill: var(--chalk-soft); font-size: 20px; }
+  .stage .big { font-family: var(--marker); fill: var(--chalk); font-size: 26px; }
+  .stage .warn { fill: var(--chalk-yellow); }
+  .result { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .result .tile { padding: 14px 16px; }
+  .result .label { font-size: 16px; color: var(--chalk-soft); }
+  .result .value { font-family: var(--marker); font-size: 34px; line-height: 1.2; }
+  .result .sub { font-size: 15px; color: var(--chalk-muted); }
+  .effects { margin-top: 14px; }
+  .effects p { margin: 0 0 8px; }
+  .note { color: var(--chalk-yellow); font-size: 16px; }
+  .idle { color: var(--chalk-muted); text-align: center; padding: 18px 0 4px; }
+</style>
+
+<section class="sim-head">
+  <h1 class="chalk-text">{{t:sim.title}}</h1>
+  <p>{{t:sim.subtitle}}</p>
+</section>
+
+<section class="sim">
+  <div class="box yellow controls">
+    <div class="control">
+      <label for="speed">{{t:sim.speed}} <b><output id="speed-out">650</output> km/s</b></label>
+      <input id="speed" type="range" min="300" max="2500" step="50" value="650">
+      <div class="scale"><span>{{t:sim.speed_slow}}</span><span>{{t:sim.speed_fast}}</span></div>
+    </div>
+    <div class="control">
+      <label for="density">{{t:sim.density}} <b><output id="density-out">10</output> /cm³</b></label>
+      <input id="density" type="range" min="1" max="50" step="1" value="10">
+      <small>{{t:sim.density_hint}}</small>
+    </div>
+    <div class="control">
+      <label for="bz">{{t:sim.bz}} <b><output id="bz-out">−10</output> nT</b></label>
+      <input id="bz" type="range" min="-40" max="40" step="1" value="-10">
+      <div class="scale"><span>⬇ {{t:sim.bz_south}}</span><span>{{t:sim.bz_north}} ⬆</span></div>
+      <small>{{t:sim.bz_hint}}</small>
+    </div>
+    <fieldset class="aim">
+      <legend>{{t:sim.aim}}</legend>
+      <label><input type="radio" name="aim" value="direct" checked><span>{{t:sim.aim_direct}}</span></label>
+      <label><input type="radio" name="aim" value="glancing"><span>{{t:sim.aim_glancing}}</span></label>
+      <label><input type="radio" name="aim" value="miss"><span>{{t:sim.aim_miss}}</span></label>
+    </fieldset>
+    <p class="travel-info" id="travel-info"></p>
+    <button class="chalk-btn launch" id="launch" disabled>{{t:sim.launch}}</button>
+  </div>
+
+  <div>
+    <div class="box stage">
+      <svg id="stage" viewBox="0 0 900 260" role="img" aria-label="{{t:sim.stage_aria}}">
+        <g filter="url(#wobble)">
+          <circle cx="80" cy="130" r="52" fill="none" stroke="var(--chalk-yellow)" stroke-width="4"/>
+          <path d="M80 62v-20M80 218v-20M12 130h-20M168 130h-20M32 82l-12-12M128 178l12 12M32 178l-12 12M128 82l12-12" stroke="var(--chalk-yellow)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="826" cy="130" r="26" fill="none" stroke="var(--chalk-blue)" stroke-width="4"/>
+          <path d="M814 122 q6 -6 12 0 t10 6 M812 138 q8 3 14 8" fill="none" stroke="var(--chalk-green)" stroke-width="3"/>
+          <rect x="752" y="122" width="14" height="14" fill="none" stroke="var(--chalk)" stroke-width="2.5"/>
+          <path d="M752 129h-12M766 129h12" stroke="var(--chalk)" stroke-width="2.5"/>
+        </g>
+        <path d="M150 130 H 760" stroke="rgba(241,239,231,0.18)" stroke-width="2" stroke-dasharray="4 10"/>
+        <text x="80" y="214" text-anchor="middle">{{t:sim.sun}}</text>
+        <text x="759" y="108" text-anchor="middle">L1</text>
+        <text x="826" y="176" text-anchor="middle">{{t:sim.earth}}</text>
+        <g id="aurora" opacity="0">
+          <path d="M800 108 q26 -24 52 0" fill="none" stroke="var(--chalk-green)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M800 152 q26 24 52 0" fill="none" stroke="var(--chalk-pink)" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <g id="bubble" opacity="0">
+          <path d="M-22 -18 q30 -14 44 18 q-14 32 -44 18 q12 -18 0 -36z" fill="rgba(255,179,122,0.18)" stroke="var(--chalk-orange)" stroke-width="3"/>
+          <path id="bubble-field" d="M-6 -8 v16 l-5 -5 m5 5 l5 -5" fill="none" stroke="var(--chalk)" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <text id="clock" class="big" x="450" y="40" text-anchor="middle"></text>
+        <text id="l1-msg" class="warn" x="660" y="84" text-anchor="middle"></text>
+        <text id="earth-msg" class="big" x="470" y="236" text-anchor="middle"></text>
+      </svg>
+    </div>
+
+    <div id="result" aria-live="polite">
+      <p class="idle">{{t:sim.idle}}</p>
+    </div>
+  </div>
+</section>
+
+<script>
+const AU_KM = 1.496e8, L1_KM = 1.5e6;
+const $ = (id) => document.getElementById(id);
+let model = null;
+
+function evalTrees(ex, x) {
+  let total = ex.baseline;
+  for (const nodes of ex.trees) {
+    let i = 0;
+    while (nodes[i][0] !== -1) {
+      const [f, threshold, left, right, , missingLeft] = nodes[i];
+      const v = x[f];
+      i = (v == null || Number.isNaN(v) ? missingLeft : v <= threshold) ? left : right;
+    }
+    total += nodes[i][4];
+  }
+  return total;
+}
+
+// Mesma conta do treino: VBs (mV/m) = velocidade × Bz para o sul.
+function predict(speed, density, bz) {
+  const x = [speed, density, speed * Math.max(-bz, 0) / 1000];
+  return {
+    kp: Math.min(9, Math.max(0, evalTrees(model.models.kp, x))),
+    dst: evalTrees(model.models.dst, x),
+    vbs: x[2],
+  };
+}
+
+const G_LEVELS = [[8.67, 5], [7.67, 4], [6.67, 3], [5.67, 2], [4.67, 1]];
+// Calculado sobre o valor exibido (1 casa), para o rótulo nunca contradizer o número.
+const gLevel = (kp) => { const k = Math.round(kp * 10) / 10; return (G_LEVELS.find(([min]) => k >= min - 0.005) || [0, 0])[1]; };
+// Linha de visibilidade (mesma regra da página da aurora): latitude magnética até onde dá para ver no horizonte.
+const auroraLat = (kp) => 66 - 1.5 * kp - Math.max(0, kp - 8) * 8;
+
+function duration(hours) {
+  let d = Math.floor(hours / 24), h = Math.round(hours - d * 24);
+  if (h === 24) { d += 1; h = 0; }
+  if (d === 0) return t("sim_hours", { h: Math.max(1, h) });
+  const days = d === 1 ? t("sim_day1") : t("sim_days", { d });
+  return h ? t("sim_days_hours", { days, h }) : days;
+}
+
+function inputs() {
+  return {
+    speed: +$("speed").value, density: +$("density").value, bz: +$("bz").value,
+    aim: document.querySelector('input[name="aim"]:checked').value,
+  };
+}
+
+function update() {
+  const { speed, density, bz } = inputs();
+  $("speed-out").textContent = speed.toLocaleString(window.T.locale);
+  $("density-out").textContent = density;
+  $("bz-out").textContent = (bz > 0 ? "+" : bz < 0 ? "−" : "") + Math.abs(bz);
+  $("bubble-field").setAttribute("transform", bz > 0 ? "rotate(180)" : "");
+  $("travel-info").innerHTML = t("sim_travel", {
+    time: duration(AU_KM / speed / 3600), warn: Math.max(1, Math.round(L1_KM / speed / 60)),
+  });
+}
+
+function effectsText(g) {
+  return t("sim_effect_g" + g);
+}
+
+function showResult(r, aim) {
+  const box = $("result");
+  if (aim === "miss") {
+    box.innerHTML = `<div class="box effects"><p>${t("sim_missed")}</p></div>`;
+    return;
+  }
+  const g = gLevel(r.kp);
+  const lat = Math.max(0, Math.round(auroraLat(r.kp)));
+  const limits = model.limits;
+  const beyond = r.speedEff > limits.speed_max || r.vbs > limits.vbs_max;
+  box.innerHTML = `
+    <div class="result">
+      <div class="box tile ${g ? "pink" : "green"}"><div class="label">${t("sim_kp_label")}</div>
+        <div class="value">${fmt(r.kp)}</div><div class="sub">${g ? t("sim_g", { g }) : t("sim_no_storm")}</div></div>
+      <div class="box tile blue"><div class="label">${t("sim_dst_label")}</div>
+        <div class="value">${fmt(r.dst, 0)} nT</div><div class="sub">${r.dst <= -50 ? t("sim_dst_storm") : t("sim_dst_calm")}</div></div>
+      <div class="box tile yellow"><div class="label">${t("sim_magnet_label")}</div>
+        <div class="value">${t(r.bz < 0 ? "sim_magnet_yes" : "sim_magnet_no")}</div>
+        <div class="sub">${t(r.bz < 0 ? "sim_magnet_yes_sub" : "sim_magnet_no_sub")}</div></div>
+    </div>
+    <div class="box effects">
+      <p>${effectsText(g)}</p>
+      <p>${t("sim_aurora", { lat })} <a href="{{url:aurora}}#kp=${Math.round(r.kp)}">${t("sim_aurora_link")}</a></p>
+      ${aim === "glancing" ? `<p class="note">${t("sim_glancing_note")}</p>` : ""}
+      ${beyond ? `<p class="note">⚠ ${t("sim_beyond")}</p>` : ""}
+    </div>`;
+}
+
+function compute(inp) {
+  // De raspão, só uma parte da bolha (e do campo) atinge a Terra.
+  const k = inp.aim === "glancing" ? { v: 0.8, n: 0.6, b: 0.5 } : { v: 1, n: 1, b: 1 };
+  const speedEff = inp.speed * k.v, bzEff = inp.bz * k.b;
+  return { ...predict(speedEff, inp.density * k.n, bzEff), bz: bzEff, speedEff };
+}
+
+function launch() {
+  const inp = inputs();
+  const result = compute(inp);
+  const bubble = $("bubble"), aurora = $("aurora");
+  const travelHours = AU_KM / inp.speed / 3600;
+  const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0
+    : Math.min(6000, Math.max(1400, (travelHours / 24) * 1800));
+  const miss = inp.aim === "miss";
+  const [x0, x1] = [140, 800];
+  $("launch").disabled = true;
+  $("l1-msg").textContent = ""; $("earth-msg").textContent = "";
+  aurora.setAttribute("opacity", 0);
+  bubble.setAttribute("opacity", 1);
+  let start = null, warned = false;
+  function frame(ts) {
+    if (start === null) start = ts;
+    const p = ms ? Math.min(1, (ts - start) / ms) : 1;
+    const x = x0 + (x1 - x0) * p;
+    const y = miss ? 130 - 95 * p * p : 130;
+    const scale = 0.7 + 0.8 * p; // a bolha cresce enquanto viaja
+    bubble.setAttribute("transform", `translate(${x},${y}) scale(${scale})`);
+    $("clock").textContent = "⏱ " + duration(travelHours * p);
+    if (!warned && x >= 752 && !miss) {
+      warned = true;
+      $("l1-msg").textContent = t("sim_l1_seen", { warn: Math.max(1, Math.round(L1_KM / inp.speed / 60)) });
+    }
+    if (p < 1) return requestAnimationFrame(frame);
+    if (miss) {
+      bubble.setAttribute("opacity", 0);
+      $("earth-msg").textContent = t("sim_earth_safe");
+    } else {
+      bubble.setAttribute("opacity", 0);
+      aurora.setAttribute("opacity", result.bz < 0 ? Math.min(1, 0.25 + result.kp / 9) : 0.15);
+      $("earth-msg").textContent = t(result.bz < 0 ? "sim_earth_click" : "sim_earth_bounce");
+    }
+    showResult(result, inp.aim);
+    $("launch").disabled = false;
+  }
+  requestAnimationFrame(frame);
+}
+
+["speed", "density", "bz"].forEach((id) => $(id).addEventListener("input", update));
+document.querySelectorAll('input[name="aim"]').forEach((r) => r.addEventListener("change", update));
+$("launch").addEventListener("click", launch);
+update();
+fetch("{{static:sim-model.json}}").then((r) => r.json()).then((m) => { model = m; $("launch").disabled = false; });
+</script>

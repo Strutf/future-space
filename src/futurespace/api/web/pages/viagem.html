@@ -1,0 +1,239 @@
+<style>
+  .tt-head { text-align: center; padding: 32px 0 8px; }
+  .tt-head h1 { font-size: clamp(36px, 7vw, 64px); transform: rotate(-1.5deg); }
+  .tt-head p { color: var(--chalk-soft); max-width: 680px; margin: 10px auto 0; }
+  .events { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 26px 0 18px; }
+  .event {
+    font: 19px var(--hand); color: var(--chalk-soft); background: transparent; cursor: pointer; padding: 4px 16px;
+    border: 2px solid var(--chalk-line); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+  .event[aria-pressed="true"] { color: var(--board); background: var(--chalk-yellow); border-color: var(--chalk-yellow); transform: rotate(-1.5deg); }
+  .story h2 { font-size: 26px; }
+  .story p { margin: 8px 0 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .badge { font-size: 15px; padding: 1px 10px; border: 1.5px solid var(--chalk-orange); color: var(--chalk-orange); border-radius: 12px 4px 12px 4px; }
+  .player { display: flex; align-items: center; gap: 14px; margin: 18px 0 6px; }
+  .player button { font: 20px var(--marker); border: 0; cursor: pointer; min-width: 120px; }
+  .player input { flex: 1; accent-color: var(--chalk-yellow); }
+  .readout { font-size: 17px; color: var(--chalk-soft); min-height: 52px; }
+  .readout b { font-family: var(--marker); font-weight: 400; color: var(--chalk); }
+  .panels svg { display: block; width: 100%; }
+  .panels text { font-family: var(--hand); fill: var(--chalk-muted); font-size: 14px; }
+  .panels .ptitle { fill: var(--chalk); font-size: 16px; }
+  .moments { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+  .moments button {
+    font: 16px var(--hand); color: var(--chalk-blue); background: transparent; cursor: pointer;
+    border: 1.5px dashed var(--chalk-blue); border-radius: 10px; padding: 2px 10px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 16px; color: var(--chalk-soft); margin-top: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .key { display: inline-block; width: 12px; height: 12px; }
+  .key.obs { width: 20px; height: 0; border-top: 3px solid var(--series-observed); }
+  .key.ia { background: var(--series-ia); border-radius: 50%; }
+  .key.south { background: rgba(208, 59, 59, 0.35); }
+</style>
+
+<section class="tt-head">
+  <h1 class="chalk-text">{{t:travel.title}}</h1>
+  <p>{{t:travel.subtitle}}</p>
+</section>
+
+<div class="events" role="group" aria-label="{{t:travel.events_aria}}">
+  <button class="event" data-event="may2024" aria-pressed="true">{{t:travel.ev_may2024}}</button>
+  <button class="event" data-event="stpatrick2015" aria-pressed="false">{{t:travel.ev_stpatrick2015}}</button>
+  <button class="event" data-event="halloween2003" aria-pressed="false">{{t:travel.ev_halloween2003}}</button>
+  <button class="event" data-event="quebec1989" aria-pressed="false">{{t:travel.ev_quebec1989}}</button>
+</div>
+
+<section class="box story">
+  <h2 class="chalk-text" id="story-title"></h2>
+  <p id="story-text"></p>
+  <div class="badges" id="badges"></div>
+</section>
+
+<section class="box panels" style="margin-top: 24px">
+  <div class="player">
+    <button class="chalk-btn" id="play">{{t:travel.play}}</button>
+    <input type="range" id="scrub" min="0" max="0" value="0" aria-label="{{t:travel.scrub_aria}}">
+  </div>
+  <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="legend" aria-hidden="true">
+    <span><i class="key obs"></i>{{t:travel.legend_observed}}</span>
+    <span><i class="key ia"></i>{{t:travel.legend_ia}}</span>
+    <span><i class="key south"></i>{{t:travel.legend_south}}</span>
+  </div>
+  <div id="charts"></div>
+  <div class="moments" id="moments"></div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ns = "http://www.w3.org/2000/svg";
+let replays = null, current = "may2024", idx = 0, timer = null, playheads = [];
+
+const PANELS = [
+  { key: "speed", title: "tt_speed", unit: "km/s", digits: 0 },
+  { key: "bz", title: "tt_bz", unit: "nT", digits: 1, zero: true, south: true },
+  { key: "kp", ia: "ia_kp", title: "tt_kp", unit: "", digits: 1, fixed: [0, 9], threshold: 4.67 },
+  { key: "dst", ia: "ia_dst", title: "tt_dst", unit: "nT", digits: 0, threshold: -50 },
+];
+
+function extent(values, panel) {
+  if (panel.fixed) return panel.fixed;
+  const v = values.filter((x) => x != null);
+  if (!v.length) return [0, 1];
+  let lo = Math.min(...v), hi = Math.max(...v);
+  if (panel.zero || panel.threshold != null) { lo = Math.min(lo, panel.threshold ?? 0, 0); hi = Math.max(hi, 0); }
+  const pad = (hi - lo) * 0.08 || 1;
+  return [lo - pad, hi + pad];
+}
+
+function drawCharts() {
+  const ev = replays.events[current];
+  const hours = ev.hours;
+  const box = $("charts");
+  const W = Math.max(box.clientWidth, 300), H = W < 600 ? 92 : 112, m = { top: 22, right: 12, bottom: 6, left: 46 };
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  const x = (i) => m.left + (i / (hours.length - 1)) * iw;
+  box.replaceChildren();
+  playheads = [];
+  PANELS.forEach((panel, pi) => {
+    const last = pi === PANELS.length - 1;
+    const h = H + (last ? 22 : 0);
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${h}`);
+    svg.setAttribute("height", h);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", t(panel.title));
+    const add = (tag, attrs, text, parent = svg) => {
+      const el = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      if (text != null) el.textContent = text;
+      parent.appendChild(el);
+      return el;
+    };
+    const values = hours.map((r) => r[panel.key]);
+    const iaValues = panel.ia ? hours.map((r) => r[panel.ia]) : [];
+    const [lo, hi] = extent(values.concat(iaValues), panel);
+    const y = (v) => m.top + ih - ((v - lo) / (hi - lo)) * ih;
+    add("text", { x: m.left, y: 15, class: "ptitle" }, t(panel.title) + (panel.unit ? ` (${panel.unit})` : ""));
+    add("line", { x1: m.left, x2: W - m.right, y1: m.top + ih, y2: m.top + ih, stroke: "rgba(241,239,231,0.3)" });
+    add("text", { x: m.left - 6, y: y(hi) + 10, "text-anchor": "end" }, Math.round(hi));
+    add("text", { x: m.left - 6, y: y(lo), "text-anchor": "end" }, Math.round(lo));
+    if (panel.south && lo < 0) {
+      add("rect", { x: m.left, y: y(0), width: iw, height: y(lo) - y(0), fill: "rgba(208,59,59,0.12)" });
+    }
+    if (panel.zero) add("line", { x1: m.left, x2: W - m.right, y1: y(0), y2: y(0), stroke: "rgba(241,239,231,0.35)", "stroke-dasharray": "4 6" });
+    if (panel.threshold != null) add("line", { x1: m.left, x2: W - m.right, y1: y(panel.threshold), y2: y(panel.threshold), stroke: css("--critical"), "stroke-width": 1.5 });
+
+    // Camada clara (todo o evento) + camada forte recortada até a hora escolhida.
+    const clipId = `clip-${pi}`;
+    const clip = add("clipPath", { id: clipId });
+    const clipRect = add("rect", { x: 0, y: 0, width: m.left, height: h }, null, clip);
+    const layers = [add("g", { opacity: 0.22 }), add("g", { "clip-path": `url(#${clipId})` })];
+    const linePath = (vals) => {
+      let d = "";
+      vals.forEach((v, i) => { if (v == null) return; d += (i && vals[i - 1] != null ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); });
+      return d;
+    };
+    for (const g of layers) {
+      add("path", { d: linePath(values), fill: "none", stroke: css("--series-observed"), "stroke-width": 2.5, "stroke-linejoin": "round" }, null, g);
+      iaValues.forEach((v, i) => { if (v != null) add("circle", { cx: x(i), cy: y(v), r: 2.6, fill: css("--series-ia") }, null, g); });
+    }
+    const head = add("line", { x1: m.left, x2: m.left, y1: m.top - 4, y2: m.top + ih, stroke: css("--chalk-yellow"), "stroke-width": 2 });
+    if (last) {
+      [0, 0.5, 1].forEach((f) => {
+        const i = Math.round(f * (hours.length - 1));
+        add("text", { x: x(i), y: h - 4, "text-anchor": f === 0 ? "start" : f === 1 ? "end" : "middle" },
+          dayLabel(hours[i].time) + " " + hour(hours[i].time));
+      });
+    }
+    // Clicar no gráfico leva a linha do tempo até aquele ponto.
+    svg.addEventListener("click", (e) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) * W;
+      setIndex(Math.round(((px - m.left) / iw) * (hours.length - 1)));
+    });
+    playheads.push({ head, clipRect, x });
+    box.appendChild(svg);
+  });
+  setIndex(idx);
+}
+
+function setIndex(i) {
+  const hours = replays.events[current].hours;
+  idx = Math.max(0, Math.min(hours.length - 1, i));
+  $("scrub").value = idx;
+  for (const p of playheads) {
+    const px = p.x(idx);
+    p.head.setAttribute("x1", px); p.head.setAttribute("x2", px);
+    p.clipRect.setAttribute("width", px + 1);
+  }
+  const r = hours[idx];
+  const val = (v, d, unit = "") => (v == null ? "–" : fmt(v, d) + unit);
+  $("readout").innerHTML = `<b>${dayLabel(r.time)} ${hour(r.time)} UTC</b> · ` +
+    t("tt_readout", {
+      speed: val(r.speed, 0, " km/s"), bz: val(r.bz, 1, " nT"),
+      kp: val(r.kp, 1), iakp: val(r.ia_kp, 1), dst: val(r.dst, 0, " nT"), iadst: val(r.ia_dst, 0, " nT"),
+    });
+}
+
+function moments() {
+  const hours = replays.events[current].hours;
+  const pick = (key, better) => {
+    let best = -1;
+    hours.forEach((r, i) => { if (r[key] != null && (best < 0 || better(r[key], hours[best][key]))) best = i; });
+    return best;
+  };
+  const list = [
+    ["tt_m_speed", pick("speed", (a, b) => a > b)],
+    ["tt_m_bz", pick("bz", (a, b) => a < b)],
+    ["tt_m_kp", pick("kp", (a, b) => a > b)],
+    ["tt_m_dst", pick("dst", (a, b) => a < b)],
+  ].filter(([, i]) => i >= 0);
+  $("moments").replaceChildren(...list.map(([key, i]) => {
+    const b = document.createElement("button");
+    b.textContent = t(key);
+    b.addEventListener("click", () => { stop(); setIndex(i); });
+    return b;
+  }));
+}
+
+function selectEvent(key) {
+  stop();
+  current = key;
+  idx = 0;
+  const ev = replays.events[key];
+  document.querySelectorAll(".event").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.event === key)));
+  $("story-title").textContent = t("tt_title_" + key);
+  $("story-text").textContent = t("tt_story_" + key);
+  const badges = [];
+  if (ev.in_training) badges.push(t("tt_badge_training"));
+  else badges.push(t("tt_badge_unseen"));
+  if (ev.solar_wind_coverage < 0.5) badges.push(t("tt_badge_no_wind"));
+  $("badges").replaceChildren(...badges.map((text) => Object.assign(document.createElement("span"), { className: "badge", textContent: text })));
+  $("scrub").max = ev.hours.length - 1;
+  drawCharts();
+  moments();
+}
+
+function stop() { clearInterval(timer); timer = null; $("play").textContent = t("tt_play"); }
+function play() {
+  if (timer) return stop();
+  const hours = replays.events[current].hours;
+  if (idx >= hours.length - 1) setIndex(0);
+  $("play").textContent = t("tt_pause");
+  timer = setInterval(() => {
+    if (idx >= hours.length - 1) return stop();
+    setIndex(idx + 1);
+  }, 140);
+}
+
+document.querySelectorAll(".event").forEach((b) => b.addEventListener("click", () => selectEvent(b.dataset.event)));
+$("play").addEventListener("click", play);
+$("scrub").addEventListener("input", (e) => { stop(); setIndex(+e.target.value); });
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => replays && drawCharts(), 150); });
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+fetch("{{static:replays.json}}").then((r) => r.json()).then((data) => { replays = data; selectEvent(current); });
+</script>

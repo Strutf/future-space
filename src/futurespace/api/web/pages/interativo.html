@@ -1,23 +1,58 @@
 <style>
-  .soon { text-align: center; padding: 72px 0 24px; }
-  .soon h1 { font-size: clamp(44px, 9vw, 84px); transform: rotate(-2deg); }
-  .soon p { font-size: 22px; color: var(--chalk-soft); max-width: 560px; margin: 18px auto 0; }
-  .rocket { width: 180px; height: 180px; margin: 32px auto 0; display: block; }
-  .rocket * { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  .flame { animation: flicker 0.6s ease-in-out infinite alternate; transform-origin: 90px 150px; }
-  @keyframes flicker { from { transform: scaleY(0.8); } to { transform: scaleY(1.15); } }
-  @media (prefers-reduced-motion: reduce) { .flame { animation: none; } }
+  .play-head { text-align: center; padding: 40px 0 8px; }
+  .play-head h1 { font-size: clamp(40px, 8vw, 76px); transform: rotate(-2deg); }
+  .play-head p { font-size: 21px; color: var(--chalk-soft); max-width: 620px; margin: 14px auto 0; }
+  .play-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 28px; margin-top: 40px; }
+  .play-grid .box { display: flex; flex-direction: column; gap: 10px; }
+  .play-grid .box p { margin: 0; flex: 1; }
+  .play-grid .art { width: 100%; height: 120px; }
+  .play-grid .art * { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .play-grid .chalk-btn { align-self: flex-start; margin-top: 6px; }
 </style>
 
-<section class="soon">
-  <h1 class="chalk-text">{{t:interativo.title}}</h1>
-  <svg class="rocket wiggle" viewBox="0 0 180 180" aria-hidden="true">
-    <g filter="url(#wobble)">
-      <path d="M90 20 Q118 52 112 112 H68 Q62 52 90 20 Z" stroke="var(--chalk)"/>
-      <circle cx="90" cy="70" r="11" stroke="var(--chalk-blue)"/>
-      <path d="M68 96 L50 124 L68 116 M112 96 L130 124 L112 116" stroke="var(--chalk-pink)"/>
-      <path class="flame" d="M76 116 Q90 168 104 116" stroke="var(--chalk-orange)"/>
-    </g>
-  </svg>
-  <p>{{t:interativo.text}}</p>
+<section class="play-head">
+  <h1 class="chalk-text">{{t:play.title}}</h1>
+  <p>{{t:play.subtitle}}</p>
+</section>
+
+<section class="play-grid">
+  <div class="box yellow">
+    <svg class="art" viewBox="0 0 260 120" aria-hidden="true"><g filter="url(#wobble)">
+      <circle cx="44" cy="60" r="26" stroke="var(--chalk-yellow)"/>
+      <path d="M44 22v-10M44 108v-10M6 60h10M72 60h10M17 33l7 7M64 80l7 7M17 87l7-7M64 40l7-7" stroke="var(--chalk-yellow)"/>
+      <path d="M118 44 q26 -10 38 16 q-12 26 -38 16 q10 -16 0 -32z" stroke="var(--chalk-orange)"/>
+      <path d="M100 52h-10M100 60h-16M100 68h-10" stroke="var(--chalk-pink)"/>
+      <circle cx="226" cy="60" r="18" stroke="var(--chalk-blue)"/>
+      <path d="M200 34 q26 -18 52 0M200 86 q26 18 52 0" stroke="var(--chalk-green)"/>
+    </g></svg>
+    <h2 class="chalk-text">{{t:play.sim_title}}</h2>
+    <p>{{t:play.sim_text}}</p>
+    <a class="chalk-btn" href="{{url:tempestade}}">{{t:play.sim_cta}}</a>
+  </div>
+
+  <div class="box blue">
+    <svg class="art" viewBox="0 0 260 120" aria-hidden="true"><g filter="url(#wobble)">
+      <circle cx="70" cy="60" r="40" stroke="var(--chalk)"/>
+      <path d="M70 60V32M70 60l20 12" stroke="var(--chalk-yellow)"/>
+      <path d="M40 22 l-12 -6 l2 14" stroke="var(--chalk-blue)"/>
+      <path d="M130 90 L150 70 L168 80 L190 30 L210 60 L238 50" stroke="var(--chalk-pink)"/>
+      <path d="M128 98h112" stroke="var(--chalk-soft)"/>
+    </g></svg>
+    <h2 class="chalk-text">{{t:play.travel_title}}</h2>
+    <p>{{t:play.travel_text}}</p>
+    <a class="chalk-btn" href="{{url:viagem}}">{{t:play.travel_cta}}</a>
+  </div>
+
+  <div class="box green">
+    <svg class="art" viewBox="0 0 260 120" aria-hidden="true"><g filter="url(#wobble)">
+      <path d="M20 100 Q130 70 240 100" stroke="var(--chalk-soft)"/>
+      <path d="M30 70 Q80 20 130 50 T 230 40" stroke="var(--chalk-green)"/>
+      <path d="M40 80 Q90 40 140 62 T 226 56" stroke="var(--chalk-pink)"/>
+      <path d="M60 104 l10 -14 l10 14 M180 104 l8 -10 l8 10" stroke="var(--chalk)"/>
+      <path d="M200 20 l3 6 l6 1 l-5 4 l2 6 l-6 -3 l-6 3 l2 -6 l-5 -4 l6 -1z" stroke="var(--chalk-yellow)"/>
+    </g></svg>
+    <h2 class="chalk-text">{{t:play.aurora_title}}</h2>
+    <p>{{t:play.aurora_text}}</p>
+    <a class="chalk-btn" href="{{url:aurora}}">{{t:play.aurora_cta}}</a>
+  </div>
 </section>

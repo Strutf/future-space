@@ -67,7 +67,21 @@ PAGE_URLS = {
     "dashboard": {"pt": "/dashboard", "en": "/en/dashboard", "es": "/es/dashboard", "fr": "/fr/dashboard"},
     "sobre": {"pt": "/sobre", "en": "/en/about", "es": "/es/acerca", "fr": "/fr/a-propos"},
     "interativo": {"pt": "/interativo", "en": "/en/interactive", "es": "/es/interactivo", "fr": "/fr/interactif"},
+    "tempestade": {
+        "pt": "/interativo/tempestade", "en": "/en/interactive/storm",
+        "es": "/es/interactivo/tormenta", "fr": "/fr/interactif/tempete",
+    },
+    "viagem": {
+        "pt": "/interativo/viagem-no-tempo", "en": "/en/interactive/time-travel",
+        "es": "/es/interactivo/viaje-en-el-tiempo", "fr": "/fr/interactif/voyage-dans-le-temps",
+    },
+    "aurora": {
+        "pt": "/interativo/aurora", "en": "/en/interactive/aurora",
+        "es": "/es/interactivo/aurora", "fr": "/fr/interactif/aurore",
+    },
 }
+# Páginas que pertencem a uma seção do menu (o menu destaca a seção).
+SECTIONS = {"tempestade": "interativo", "viagem": "interativo", "aurora": "interativo"}
 SITE_URL = "https://future-space-six.vercel.app"
 LOCALES = {lang: json.loads((WEB / "locales" / f"{lang}.json").read_text(encoding="utf-8")) for lang in LANGS}
 
@@ -110,7 +124,7 @@ def render_page(name: str, lang: str) -> str:
     html = re.sub(r"\{\{t:([\w.]+)\}\}", lambda m: _lookup(locale, m.group(1)), html)
     html = re.sub(r"\{\{url:(\w+)\}\}", lambda m: PAGE_URLS[m.group(1)][lang], html)
     html = re.sub(
-        r"\{\{static:([\w.]+)\}\}", lambda m: f"/static/{m.group(1)}?v={STATIC_VERSIONS[m.group(1)]}", html
+        r"\{\{static:([\w.-]+)\}\}", lambda m: f"/static/{m.group(1)}?v={STATIC_VERSIONS[m.group(1)]}", html
     )
     js_texts = json.dumps(locale["js"], ensure_ascii=False).replace("</", "<\\/")
     # Endereços desta página em cada idioma, para o redirecionamento da primeira visita.
@@ -118,6 +132,7 @@ def render_page(name: str, lang: str) -> str:
     replacements = {
         "{{title}}": locale["titles"][name],
         "{{page}}": name,
+        "{{section}}": SECTIONS.get(name, name),
         "{{lang}}": lang,
         "{{page_urls}}": page_urls,
         "{{hreflang_links}}": _hreflang_links(name),
@@ -301,7 +316,7 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         path = STATIC / name
         if "/" in name or name.startswith(".") or not path.is_file():
             raise HTTPException(404, "arquivo não encontrado")
-        media = {".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png"}
+        media = {".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json"}
         # Com a versão certa no endereço, o conteúdo nunca muda: pode ficar em cache para sempre.
         # Sem ela (ou com versão antiga), cache curto, para não prender ninguém num arquivo velho.
         cache = (

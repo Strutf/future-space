@@ -1,0 +1,180 @@
+<style>
+  .au-head { text-align: center; padding: 32px 0 8px; }
+  .au-head h1 { font-size: clamp(36px, 7vw, 64px); transform: rotate(-1.5deg); }
+  .au-head p { color: var(--chalk-soft); max-width: 680px; margin: 10px auto 0; }
+  .au-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin: 24px 0 14px; }
+  .au-controls label { font-size: 20px; }
+  .au-controls input { flex: 1; min-width: 200px; accent-color: var(--chalk-green); }
+  .kp-big { font-family: var(--marker); font-size: 30px; color: var(--chalk-green); min-width: 140px; }
+  .now-btn { border: 0; cursor: pointer; }
+  .city-select {
+    font: 19px var(--hand); color: var(--chalk); background: var(--board-deep); padding: 4px 10px;
+    border: 2px solid var(--chalk-line); border-radius: 12px 4px 12px 4px;
+  }
+  .map svg { width: 100%; height: auto; display: block; }
+  .map text { font-family: var(--hand); font-size: 5.5px; fill: var(--chalk-soft); pointer-events: none; }
+  .map .city text { pointer-events: auto; }
+  .map .city:focus-visible circle { stroke: var(--chalk-yellow); }
+  .map .city { cursor: pointer; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 16px; color: var(--chalk-soft); margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .key { display: inline-block; width: 16px; height: 12px; border-radius: 3px; }
+  .key.over { background: rgba(155, 227, 176, 0.75); }
+  .key.horizon { background: rgba(155, 227, 176, 0.28); border: 1px dashed var(--chalk-green); }
+  .key.city { width: 10px; height: 10px; border-radius: 50%; background: var(--chalk-yellow); }
+  .city-info { margin-top: 18px; }
+  .city-info h2 { font-size: 24px; }
+  .city-info p { margin: 6px 0 0; }
+  .fine { color: var(--chalk-muted); font-size: 15px; margin-top: 14px; }
+</style>
+
+<section class="au-head">
+  <h1 class="chalk-text">{{t:aurora.title}}</h1>
+  <p>{{t:aurora.subtitle}}</p>
+</section>
+
+<section class="box">
+  <div class="au-controls">
+    <label for="kp">{{t:aurora.kp_label}}</label>
+    <input id="kp" type="range" min="0" max="9" step="0.33" value="5">
+    <span class="kp-big" id="kp-out" aria-live="polite"></span>
+    <button class="chalk-btn now-btn" id="now">{{t:aurora.now}}</button>
+  </div>
+  <div class="au-controls">
+    <label for="city">{{t:aurora.city_label}}</label>
+    <select id="city" class="city-select"></select>
+  </div>
+  <div class="map"><svg id="map" viewBox="0 0 360 180" role="img" aria-label="{{t:aurora.map_aria}}"></svg></div>
+  <div class="legend" aria-hidden="true">
+    <span><i class="key over"></i>{{t:aurora.legend_over}}</span>
+    <span><i class="key horizon"></i>{{t:aurora.legend_horizon}}</span>
+    <span><i class="key city"></i>{{t:aurora.legend_city}}</span>
+  </div>
+  <div class="city-info" id="city-info" aria-live="polite"></div>
+  <p class="fine">{{t:aurora.fine_print}}</p>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ns = "http://www.w3.org/2000/svg";
+const RAD = Math.PI / 180;
+// Polo norte geomagnético (dipolo do IGRF, ~2025).
+const POLE = { lat: 80.8, lon: -72.7 };
+// Cidades com o nome na língua local.
+const CITIES = [
+  ["Tromsø", 69.65, 18.96], ["Reykjavík", 64.15, -21.94], ["London", 51.51, -0.13], ["Paris", 48.86, 2.35],
+  ["New York", 40.71, -74.01], ["Madrid", 40.42, -3.7], ["Lisboa", 38.72, -9.14], ["Tokyo", 35.68, 139.69],
+  ["Ciudad de México", 19.43, -99.13], ["Manaus", -3.12, -60.02], ["Rio de Janeiro", -22.91, -43.17],
+  ["São Paulo", -23.55, -46.63], ["Porto Alegre", -30.03, -51.23], ["Buenos Aires", -34.6, -58.38],
+  ["Ushuaia", -54.8, -68.3],
+];
+let selected = "São Paulo";
+
+function magLat(lat, lon) {
+  const s = Math.sin(lat * RAD) * Math.sin(POLE.lat * RAD) +
+    Math.cos(lat * RAD) * Math.cos(POLE.lat * RAD) * Math.cos((lon - POLE.lon) * RAD);
+  return Math.asin(Math.max(-1, Math.min(1, s))) / RAD;
+}
+// Linha de visibilidade (aurora no horizonte), em latitude magnética, calibrada nos mapas de aurora
+// da NOAA: ~66° − 1,5° × Kp. Kp 9 não tem teto: nas tempestades extremas a aurora vai bem mais longe.
+const horizonLat = (kp) => 66 - 1.5 * kp - Math.max(0, kp - 8) * 8;
+const overheadLat = (kp) => horizonLat(kp) + 4;
+const POLEWARD_LAT = 78; // borda do anel do lado do polo (latitude magnética)
+// Menor Kp (até 9) em que a latitude magnética `absMag` fica dentro da linha; Infinity se nunca.
+function kpNeeded(absMag, line) {
+  for (let kp = 0; kp <= 9.0001; kp += 0.01) if (line(kp) <= absMag) return kp;
+  return Infinity;
+}
+
+const px = (lon) => lon + 180, py = (lat) => 90 - lat;
+
+// Para cada meridiano, a latitude geográfica onde a latitude magnética cruza `boundary`.
+function boundaryCurve(boundary, north) {
+  const pts = [];
+  for (let lon = -180; lon <= 180; lon += 2) {
+    let found = north ? -90 : 90;
+    if (north) { for (let lat = 90; lat >= -90; lat -= 0.5) if (magLat(lat, lon) < boundary) { found = lat + 0.5; break; } }
+    else { for (let lat = -90; lat <= 90; lat += 0.5) if (magLat(lat, lon) > -boundary) { found = lat - 0.5; break; } }
+    pts.push([lon, found]);
+  }
+  return pts;
+}
+function band(outer, inner, north) {
+  // Polígono entre a curva externa (mais perto do equador) e a interna (ou o polo).
+  const a = outer.map(([lo, la]) => `${px(lo)},${py(la)}`);
+  const b = inner ? inner.slice().reverse().map(([lo, la]) => `${px(lo)},${py(la)}`)
+    : [`${px(180)},${north ? 0 : 180}`, `${px(-180)},${north ? 0 : 180}`];
+  return "M" + a.concat(b).join(" L") + " Z";
+}
+
+function draw(world) {
+  const kp = +$("kp").value;
+  const svg = $("map");
+  const add = (tag, attrs, text, parent = svg) => {
+    const el = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    if (text != null) el.textContent = text;
+    parent.appendChild(el);
+    return el;
+  };
+  svg.replaceChildren();
+  add("rect", { x: 0, y: 0, width: 360, height: 180, fill: "rgba(0,0,0,0.18)", rx: 4 });
+  for (const lat of [-60, -30, 0, 30, 60]) {
+    add("line", { x1: 0, x2: 360, y1: py(lat), y2: py(lat), stroke: "rgba(241,239,231,0.1)", "stroke-width": 0.4 });
+  }
+  // A aurora forma um anel (oval auroral): perto do polo magnético quase não há aurora.
+  for (const north of [true, false]) {
+    const over = boundaryCurve(overheadLat(kp), north), hor = boundaryCurve(horizonLat(kp), north);
+    const poleward = boundaryCurve(POLEWARD_LAT, north);
+    add("path", { d: band(hor, over, north), fill: "rgba(155,227,176,0.2)", stroke: css("--chalk-green"), "stroke-width": 0.5, "stroke-dasharray": "2 1.5" });
+    add("path", { d: band(over, poleward, north), fill: "rgba(155,227,176,0.45)", stroke: "none" });
+  }
+  // Continentes por cima, para continuarem visíveis através da aurora.
+  add("path", { d: world.path, fill: "rgba(241,239,231,0.05)", stroke: "rgba(241,239,231,0.6)", "stroke-width": 0.45, "stroke-linejoin": "round" });
+  for (const [name, lat, lon] of CITIES) {
+    const g = add("g", { class: "city", tabindex: 0, role: "button", "aria-label": name });
+    const on = name === selected;
+    // Área de toque invisível bem maior que o pontinho, para dar para clicar no celular.
+    add("circle", { cx: px(lon), cy: py(lat), r: 3.5, fill: "transparent" }, null, g);
+    add("circle", { cx: px(lon), cy: py(lat), r: on ? 2.6 : 1.7, fill: css("--chalk-yellow"), stroke: css("--board"), "stroke-width": 0.6 }, null, g);
+    if (on || lat > 45 || Math.abs(lat) > 50) add("text", { x: px(lon) + 3, y: py(lat) + 2 }, name, g);
+    const pick = () => { selected = name; $("city").value = name; draw(world); };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  }
+  const g = gName(kp);
+  $("kp-out").textContent = "Kp " + fmt(kp, 1) + (g ? " · " + g : "");
+  cityInfo(kp);
+}
+
+const G_LEVELS = [[8.67, "G5"], [7.67, "G4"], [6.67, "G3"], [5.67, "G2"], [4.67, "G1"]];
+const gName = (kp) => (G_LEVELS.find(([min]) => kp >= min) || [0, ""])[1];
+
+function cityInfo(kp) {
+  const [name, lat, lon] = CITIES.find(([n]) => n === selected);
+  const m = Math.abs(magLat(lat, lon));
+  const needHorizon = kpNeeded(m, horizonLat);
+  let text;
+  if (m >= overheadLat(kp)) text = t("au_over");
+  else if (m >= horizonLat(kp)) text = t("au_horizon");
+  else if (needHorizon > 9) text = t("au_never");
+  else text = t("au_need", { kp: fmt(Math.max(0, needHorizon), 1) });
+  $("city-info").innerHTML = `<h2 class="chalk-text">${name}</h2>
+    <p>${t("au_maglat", { lat: fmt(m, 0) })}</p><p><b>${text}</b></p>
+    ${needHorizon > 9 && lat < 0 && lat > -40 ? `<p>${t("au_brazil")}</p>` : ""}`;
+}
+
+let world = null;
+$("city").replaceChildren(...CITIES.map(([name]) => new Option(name, name, false, name === selected)));
+$("city").addEventListener("change", (e) => { selected = e.target.value; if (world) draw(world); });
+$("kp").addEventListener("input", () => world && draw(world));
+$("now").addEventListener("click", async () => {
+  const latest = await getJson("/v1/datasets/kp/latest").catch(() => null);
+  const kp = latest && latest.data && latest.data[0] && latest.data[0].kp;
+  if (kp != null) { $("kp").value = kp; if (world) draw(world); }
+});
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fromHash = /kp=([\d.]+)/.exec(location.hash);
+if (fromHash) $("kp").value = Math.min(9, +fromHash[1]);
+fetch("{{static:world-land.json}}").then((r) => r.json()).then((w) => { world = w; draw(w); });
+</script>
