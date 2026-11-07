@@ -338,8 +338,8 @@ at `GET /v1/verification/summary`.
 This component runs in the backend to accumulate data and forecasts. It is not yet shown on
 the website.
 
-Every hour, `futurespace aurora` estimates, for 37 sites and for each of the next 24 hours,
-the chance of seeing the aurora. The sites are listed in `src/futurespace/aurora/sites.py`
+Every hour, `futurespace aurora` computes, for 37 sites and for each of the next 24 hours, a
+score from 0 to 1 for the conditions to see the aurora (higher means better conditions). The sites are listed in `src/futurespace/aurora/sites.py`
 and include:
 
 - cities in and near the auroral zones;
@@ -347,22 +347,26 @@ and include:
 - Southern Hemisphere and Brazilian references;
 - locations of NASA THEMIS all-sky cameras.
 
-The forecast is computed as:
+The score is not a probability: its weights have not yet been compared with observed
+aurorae, so it can rank sites and hours but does not state how often the aurora will appear.
+A calibrated probability will be added as a separate column once observations are available.
+
+The score is computed as:
 
 ```
-visibility_chance = aurora_chance × (1 − cloud_cover/100) × darkness × moon_factor
+visibility_score = aurora_score × (1 − cloud_cover/100) × darkness × moon_factor
 ```
 
 | Component | Method (v0) |
 |---|---|
 | expected Kp | the project's Kp forecast for the 3-hour block, interpolated between the +3/+6/+12/+24 h blocks; before the first forecast block, the last measured Kp |
-| `aurora_chance` | logistic function of (expected Kp − Kp needed), with a scale of 0.5 Kp; the Kp needed comes from the visibility line used by the website's aurora map, 66° − 1.5° × Kp of dipole magnetic latitude |
+| `aurora_score` | logistic function of (expected Kp − Kp needed), with a scale of 0.5 Kp; the Kp needed comes from the visibility line used by the website's aurora map, 66° − 1.5° × Kp of dipole magnetic latitude |
 | `darkness` | 0 with the Sun above −6°, 1 below −15°, linear in between |
 | `moon_factor` | 1 − 0.3 × illuminated fraction when the Moon is above the horizon |
 | cloud cover | Open-Meteo forecast |
 
 **OVATION reference.** For the next hour, the maximum OVATION probability within 500 km is
-stored separately, together with the corresponding visibility (`visibility_chance_ovation`).
+stored separately, together with the corresponding visibility (`visibility_score_ovation`).
 At an altitude of about 110 km, the aurora appears on the horizon from that distance.
 
 The two estimates are kept apart because they are on different scales: OVATION rarely

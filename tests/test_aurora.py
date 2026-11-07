@@ -98,23 +98,23 @@ def test_visibility_combines_aurora_clouds_darkness_and_moon():
     assert tromso.loc[24, "kp_expected"] == 2.0
 
     # OVATION só nas horas 0 e 1, numa coluna própria.
-    assert tromso.loc[0, "aurora_chance_ovation"] == 0.4
-    assert np.isnan(tromso.loc[2, "aurora_chance_ovation"])
-    assert (tromso["aurora_chance"] == tromso["aurora_chance_kp"]).all()
+    assert tromso.loc[0, "aurora_score_ovation"] == 0.4
+    assert np.isnan(tromso.loc[2, "aurora_score_ovation"])
+    assert (tromso["aurora_score"] == tromso["aurora_score_kp"]).all()
 
     sky = (1 - 0.25) * tromso["darkness"] * np.where(tromso["moon_altitude"] > 0, 1 - 0.3 * tromso["moon_illumination"], 1)
-    assert tromso["visibility_chance"].to_numpy() == pytest.approx((tromso["aurora_chance"] * sky).to_numpy(), abs=1e-3)
+    assert tromso["visibility_score"].to_numpy() == pytest.approx((tromso["aurora_score"] * sky).to_numpy(), abs=1e-3)
 
     # São Paulo: a aurora nunca chega ao horizonte, mesmo com Kp 9.
-    assert (rows.loc[rows["site"] == "sao_paulo", "visibility_chance"] == 0).all()
+    assert (rows.loc[rows["site"] == "sao_paulo", "visibility_score"] == 0).all()
 
 
 def test_visibility_without_predictions_or_ovation():
     _, weather, _, kp = _inputs()
     rows = compute(pd.DataFrame(), weather, pd.DataFrame(), kp, NOW)
     assert (rows["kp_source"] == "observed").all()
-    assert rows["aurora_chance_ovation"].isna().all()
-    assert rows["visibility_chance"].notna().all()
+    assert rows["aurora_score_ovation"].isna().all()
+    assert rows["visibility_score"].notna().all()
 
 
 def test_connectors_parse_ovation_and_open_meteo():

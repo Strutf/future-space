@@ -1,20 +1,24 @@
 """Previsão de visibilidade da aurora por cidade, de 0 a 24 h à frente (fórmula v0).
 
-visibility_chance = aurora_chance × (1 − nuvens) × escuridão × fator da Lua
+O resultado é uma pontuação de 0 a 1 (mais alto = condições melhores), não uma probabilidade:
+os pesos ainda não foram comparados com auroras observadas. Quando forem calibrados, a
+probabilidade entra numa coluna própria.
 
-- aurora_chance: logística da diferença entre o Kp esperado e o Kp necessário para a cidade,
+visibility_score = aurora_score × (1 − nuvens) × escuridão × fator da Lua
+
+- aurora_score: logística da diferença entre o Kp esperado e o Kp necessário para a cidade,
   com a mesma regra do mapa do site (linha do horizonte ≈ 66° − 1,5° × Kp de latitude
   magnética). Usada em todas as antecedências, para a série ser coerente ao longo das 24 h.
 - OVATION (só horas 0 e 1): a maior probabilidade num raio de 500 km (a aurora, a ~110 km de
   altura, aparece no horizonte a essa distância), com a sua própria visibilidade em
-  `visibility_chance_ovation`. Fica separado porque está noutra escala (raramente passa de
+  `visibility_score_ovation`. Fica separado porque está noutra escala (raramente passa de
   ~50%) e depende da hora local magnética, que a regra do Kp ignora; o histórico desse mapa
   serve para calibrar a próxima versão da fórmula.
 - Kp esperado: previsão dos modelos do projeto para o bloco de 3 h (os modelos cobrem os
   blocos de +3, +6, +12 e +24 h; os blocos entre eles são interpolados); antes do primeiro
   bloco previsto, o último Kp medido.
 - escuridão: 0 com o Sol acima de −6°, 1 abaixo de −15°, linear entre os dois.
-- Lua: acima do horizonte, reduz a chance em até 30% (Lua cheia).
+- Lua: acima do horizonte, reduz a pontuação em até 30% (Lua cheia).
 
 Os pesos ainda não foram calibrados com observações: cada componente fica numa coluna para
 a fórmula poder ser ajustada depois (por exemplo, com câmeras all-sky).
@@ -158,16 +162,16 @@ def compute(
                     "kp_source": kp_sources[i],
                     "kp_needed": round(need, 2) if np.isfinite(need) else np.nan,
                     "ovation_nearby": nearby if lead <= OVATION_LEADS else np.nan,
-                    "aurora_chance_ovation": chance_ovation,
-                    "aurora_chance_kp": round(float(chance_kp[i]), 4),
-                    "aurora_chance": round(float(chance), 4),
+                    "aurora_score_ovation": chance_ovation,
+                    "aurora_score_kp": round(float(chance_kp[i]), 4),
+                    "aurora_score": round(float(chance), 4),
                     "cloud_cover": cloud,
                     "sun_altitude": round(float(sun[i]), 2),
                     "moon_altitude": round(float(moon[i]), 2),
                     "moon_illumination": round(float(illumination[i]), 3),
                     "darkness": round(float(darkness[i]), 3),
-                    "visibility_chance": round(float(chance * sky), 4),
-                    "visibility_chance_ovation": round(float(chance_ovation * sky), 4),
+                    "visibility_score": round(float(chance * sky), 4),
+                    "visibility_score_ovation": round(float(chance_ovation * sky), 4),
                     "method": METHOD,
                 }
             )

@@ -220,11 +220,11 @@ def cmd_aurora(args: argparse.Namespace) -> int:
     write_dataset(store, catalog.get("aurora-visibility"), rows, now=now)
     write_catalog(store, list(catalog.DATASETS), now=now)
     store.commit(f"aurora {rows['time'].iloc[0]:%Y-%m-%d %H:%M}Z")
-    best = rows.sort_values("visibility_chance", ascending=False).drop_duplicates("site").head(5)
+    best = rows.sort_values("visibility_score", ascending=False).drop_duplicates("site").head(5)
     for r in best.itertuples():
         log.info(
-            "%s: %.0f%% às %s (aurora %.0f%%, nuvens %s%%, Kp %.1f)",
-            r.site, 100 * r.visibility_chance, f"{r.target_time:%H}h UTC", 100 * r.aurora_chance,
+            "%s: pontuação %.2f às %s (aurora %.2f, nuvens %s%%, Kp %.1f)",
+            r.site, r.visibility_score, f"{r.target_time:%H}h UTC", r.aurora_score,
             "?" if pd.isna(r.cloud_cover) else f"{r.cloud_cover:.0f}", r.kp_expected,
         )
     return 0

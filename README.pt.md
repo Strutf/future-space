@@ -349,31 +349,36 @@ erro da previsão da NOAA emitida até o mesmo instante. Os resumos de 7 e 30 di
 Este componente roda no backend para acumular dados e previsões. Ele ainda não aparece no
 site.
 
-A cada hora, o `futurespace aurora` estima a chance de ver a aurora em 37 locais, para cada
-uma das próximas 24 horas. Os locais estão em `src/futurespace/aurora/sites.py` e incluem:
+A cada hora, o `futurespace aurora` calcula, para 37 locais e para cada uma das próximas 24
+horas, uma pontuação de 0 a 1 das condições para ver a aurora (mais alto = condições melhores). Os locais estão em `src/futurespace/aurora/sites.py` e incluem:
 
 - cidades nas zonas de aurora e perto delas;
 - cidades de latitude média;
 - referências do Hemisfério Sul e do Brasil;
 - locais de câmeras all-sky da rede THEMIS da NASA.
 
-A previsão é calculada assim:
+A pontuação não é uma probabilidade: os pesos ainda não foram comparados com auroras
+observadas, então ela serve para ordenar locais e horários, mas não diz com que frequência a
+aurora vai aparecer. Uma probabilidade calibrada entrará numa coluna própria quando houver
+observações.
+
+A pontuação é calculada assim:
 
 ```
-visibility_chance = aurora_chance × (1 − cloud_cover/100) × darkness × moon_factor
+visibility_score = aurora_score × (1 − cloud_cover/100) × darkness × moon_factor
 ```
 
 | Componente | Método (v0) |
 |---|---|
 | Kp esperado | previsão de Kp do projeto para o bloco de 3 horas, interpolada entre os blocos de +3/+6/+12/+24 h; antes do primeiro bloco previsto, o último Kp medido |
-| `aurora_chance` | função logística de (Kp esperado − Kp necessário), com escala de 0,5 Kp; o Kp necessário vem da linha de visibilidade usada no mapa da aurora do site, 66° − 1,5° × Kp de latitude magnética do dipolo |
+| `aurora_score` | função logística de (Kp esperado − Kp necessário), com escala de 0,5 Kp; o Kp necessário vem da linha de visibilidade usada no mapa da aurora do site, 66° − 1,5° × Kp de latitude magnética do dipolo |
 | `darkness` | 0 com o Sol acima de −6°, 1 abaixo de −15°, linear entre os dois |
 | `moon_factor` | 1 − 0,3 × fração iluminada quando a Lua está acima do horizonte |
 | nuvens | previsão do Open-Meteo |
 
 **Referência do OVATION.** Para a próxima hora, a maior probabilidade do OVATION num raio de
 500 km é guardada separadamente, junto com a visibilidade correspondente
-(`visibility_chance_ovation`). A cerca de 110 km de altura, a aurora aparece no horizonte a
+(`visibility_score_ovation`). A cerca de 110 km de altura, a aurora aparece no horizonte a
 essa distância.
 
 As duas estimativas ficam separadas porque estão em escalas diferentes: o OVATION raramente

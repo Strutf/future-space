@@ -542,8 +542,9 @@ DATASETS: tuple[Dataset, ...] = (
     Dataset(
         id="aurora-visibility",
         title="Previsão de visibilidade da aurora por cidade (experimental)",
-        description="Chance de ver a aurora em cada cidade nas próximas 24 h, emitida de hora em "
-        "hora. Combina a chance de aurora pelo Kp previsto pelos modelos do projeto com nuvens, "
+        description="Pontuação de 0 a 1 das condições para ver a aurora em cada cidade nas "
+        "próximas 24 h, emitida de hora em hora. Não é uma probabilidade: os pesos ainda não "
+        "foram calibrados com auroras observadas. Combina a aurora esperada pelo Kp previsto pelos modelos do projeto com nuvens, "
         "escuridão e Lua; nas horas 0 e 1 guarda também a versão pelo mapa OVATION. Cada "
         "componente fica numa coluna, para a fórmula poder ser recalibrada.",
         stage="ground",
@@ -565,16 +566,16 @@ DATASETS: tuple[Dataset, ...] = (
             Field("kp_source", "str", None, "observed (último Kp medido) ou model (previsão do projeto)"),
             Field("kp_needed", "float", None, "Menor Kp que leva a aurora ao horizonte da cidade"),
             Field("ovation_nearby", "float", "%", "Maior probabilidade OVATION num raio de 500 km"),
-            Field("aurora_chance_ovation", "float", None, "Chance de aurora pelo OVATION (só próxima hora)"),
-            Field("aurora_chance_kp", "float", None, "Chance de aurora pelo Kp esperado"),
-            Field("aurora_chance", "float", None, "Chance de aurora usada (pelo Kp, em todas as horas)"),
+            Field("aurora_score_ovation", "float", None, "Pontuação de aurora pelo OVATION (só próxima hora)"),
+            Field("aurora_score_kp", "float", None, "Pontuação de aurora pelo Kp esperado"),
+            Field("aurora_score", "float", None, "Pontuação de aurora usada (pelo Kp, em todas as horas)"),
             Field("cloud_cover", "float", "%", "Cobertura total de nuvens prevista"),
             Field("sun_altitude", "float", "deg", "Altura do Sol"),
             Field("moon_altitude", "float", "deg", "Altura da Lua"),
             Field("moon_illumination", "float", None, "Fração iluminada da Lua"),
             Field("darkness", "float", None, "0 (Sol acima de -6°) a 1 (abaixo de -15°)"),
-            Field("visibility_chance", "float", None, "Chance de ver a aurora"),
-            Field("visibility_chance_ovation", "float", None, "Chance de ver a aurora pelo OVATION (só próxima hora)"),
+            Field("visibility_score", "float", None, "Pontuação de 0 a 1 para ver a aurora (não calibrada)"),
+            Field("visibility_score_ovation", "float", None, "Pontuação para ver a aurora pelo OVATION (só próxima hora)"),
             Field("method", "str", None, "Versão da fórmula"),
         ),
         schedule="derived",
