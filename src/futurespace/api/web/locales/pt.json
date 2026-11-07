@@ -233,6 +233,7 @@
     "th_hour": "Hora (UTC)",
     "th_chance": "Chance (IA)",
     "th_alert": "Alerta",
-    "th_storm_real": "Teve tempestade?"
+    "th_storm_real": "Teve tempestade?",
+    "winner_few_one": "só 1 bloco com as duas previsões"
   }
 }

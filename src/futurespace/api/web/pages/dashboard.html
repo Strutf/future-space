@@ -132,7 +132,7 @@ function renderTiles(cmp) {
     const names = { ia: t("winner_ia"), noaa: t("winner_noaa"), empate: t("winner_tie") };
     setTile("t-winner", names[s.winner], t("winner_sub", { ia: fmt(s.mae_ia, 2), noaa: fmt(s.mae_noaa, 2), n: s.blocks_compared }));
   } else {
-    setTile("t-winner", t("winner_none"), s.blocks_compared ? t("winner_few", { n: s.blocks_compared }) : t("winner_no_ai"));
+    setTile("t-winner", t("winner_none"), s.blocks_compared ? t(s.blocks_compared === 1 ? "winner_few_one" : "winner_few", { n: s.blocks_compared }) : t("winner_no_ai"));
   }
 
   const observed = yesterday.blocks.filter((b) => b.observed != null).map((b) => b.observed);
@@ -190,7 +190,7 @@ function frame(daysIso, generatedAt, yTicks, yFmt) {
     parent.appendChild(el);
     return el;
   };
-  const chalk = add("g", { filter: "url(#wobble)" });
+  const chalk = add("g", {}); // sem filtro: traço limpo e leve para redesenhar
   for (const v of yTicks) {
     const base = v === 0 || v === lo;
     add("line", { x1: m.left, x2: W - m.right, y1: y(v), y2: y(v), stroke: base ? "rgba(241,239,231,0.5)" : "rgba(241,239,231,0.14)", "stroke-width": base ? 2 : 1 }, null, chalk);

@@ -46,7 +46,7 @@ async function getJson(url) {
 const STAR_PATH = "M12 2 L14.6 9.2 L22 9.4 L16 14 L18.4 21.4 L12 16.9 L5.6 21.6 L8 14.1 L2 9.5 L9.4 9.1 Z";
 
 function starSvg() {
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR_PATH}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" filter="url(#wobble)"/></svg>`;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR_PATH}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
 // Espalha estrelinhas pelo céu, evitando o miolo da página onde fica o texto.

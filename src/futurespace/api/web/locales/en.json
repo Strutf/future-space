@@ -233,6 +233,7 @@
     "th_hour": "Hour (UTC)",
     "th_chance": "Chance (AI)",
     "th_alert": "Alert",
-    "th_storm_real": "Storm?"
+    "th_storm_real": "Storm?",
+    "winner_few_one": "only 1 block with both forecasts"
   }
 }
