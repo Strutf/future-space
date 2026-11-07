@@ -396,6 +396,23 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
             now,
         )
 
+    @app.get("/v1/compare/dst", summary="Dst hora a hora (ontem, hoje e amanhã): observado e previsão da IA")
+    def compare_dst(
+        response: Response,
+        day: str | None = Query(None, alias="date", description="Dia (UTC), ex.: 2026-11-07. Padrão: hoje"),
+    ):
+        now = datetime.now(UTC)
+        target_day = parse_or_400(day, "date").date() if day else now.date()
+        start = datetime(target_day.year, target_day.month, target_day.day, tzinfo=UTC) - timedelta(days=1)
+        end = start + timedelta(days=2)
+        response.headers.update(_cache_header(300))
+        return compare.build_dst(
+            load_records("predictions", start - timedelta(days=2), end),
+            load_records("dst", start, end),
+            target_day,
+            now,
+        )
+
     @app.get("/v1/verification/summary", summary="Desempenho recente das previsões (7 e 30 dias)")
     def verification_summary(response: Response):
         summary = read_json(VERIFICATION_SUMMARY_KEY)

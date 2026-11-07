@@ -56,7 +56,19 @@
     "legend_ia": "Future Space AI",
     "legend_noaa": "NOAA",
     "legend_g1": "Storm line (G1)",
-    "table_toggle": "See the numbers as a table"
+    "table_toggle": "See the numbers as a table",
+    "tabs_aria": "Choose the chart",
+    "tab_kp": "Kp",
+    "tab_prob": "Storm chance",
+    "tab_dst": "Dst",
+    "prob_title": "Storm chance every 3 hours (AI)",
+    "prob_hint": "The probability, computed by the AI, that Kp reaches 5 or more in each block. The \"!\" marks blocks where the chance passed the threshold and it raised an alert; the ★ marks where a storm really happened. NOAA doesn't publish a chance per block.",
+    "dst_title": "Dst hour by hour: yesterday, today and tomorrow",
+    "dst_hint": "The index that best shows the effect of storms near the equator, like in Brazil. The more negative, the stronger; below −50 nT it's a storm. Only the AI forecasts Dst: NOAA doesn't publish this forecast.",
+    "legend_prob": "Storm chance (AI)",
+    "legend_alert": "AI alert",
+    "legend_storm_real": "A storm really happened",
+    "legend_dst_line": "Storm line (−50 nT)"
   },
   "sobre": {
     "title": "About the forecasts",
@@ -192,7 +204,6 @@
     "yesterday_label": "Yesterday",
     "today_label": "Today",
     "now": "now",
-    "storm_line": "storm (G1)",
     "chart_aria": "Observed Kp and Kp forecast by the AI and by NOAA, per 3-hour block, yesterday and today",
     "tip_observed": "Happened",
     "tip_not_yet": "not yet",
@@ -213,6 +224,15 @@
     "block_at": "{hour} UTC block ({when})",
     "ia_chance": " · chance of a storm: {pct}%",
     "tomorrow": "tomorrow",
-    "tomorrow_label": "Tomorrow"
+    "tomorrow_label": "Tomorrow",
+    "chart_aria_prob": "Storm chance forecast by the AI, per 3-hour block, with alerts and the storms that happened",
+    "chart_aria_dst": "Observed Dst and Dst forecast by the AI, hour by hour",
+    "tip_chance": "Storm chance",
+    "tip_alert": "Alert",
+    "tip_storm_real": "Was there a storm?",
+    "th_hour": "Hour (UTC)",
+    "th_chance": "Chance (AI)",
+    "th_alert": "Alert",
+    "th_storm_real": "Storm?"
   }
 }

@@ -15,7 +15,9 @@ from datetime import date, datetime, timedelta
 from futurespace.partitions import format_time
 
 KP_STORM = 4.67  # Kp >= 5- equivale a tempestade G1 na escala da NOAA
+DST_STORM = -50.0  # nT
 BLOCK = timedelta(hours=3)
+HOUR = timedelta(hours=1)
 
 
 def _latest_issued(rows: list[dict], cutoff: str) -> dict | None:
@@ -107,3 +109,38 @@ def build(
         "days": days,
         "next": upcoming[0] if upcoming else None,
     }
+
+
+def build_dst(predictions: list[dict], dst_observed: list[dict], day: date, now: datetime) -> dict:
+    """Dst hora a hora (ontem, hoje e amanhã): o observado e a última previsão da IA antes de cada hora."""
+    ours_by_hour: dict[str, list[dict]] = defaultdict(list)
+    for r in predictions:
+        if r["target"] == "dst":
+            ours_by_hour[r["target_time"]].append(r)
+    observed = {r["time"]: r["dst"] for r in dst_observed if r.get("dst") is not None}
+
+    now_s = format_time(now)
+    days = []
+    for d in (day - timedelta(days=1), day, day + timedelta(days=1)):
+        start = datetime(d.year, d.month, d.day, tzinfo=now.tzinfo)
+        hours = []
+        for i in range(24):
+            h = start + i * HOUR
+            key = format_time(h)
+            ia = _latest_issued(ours_by_hour.get(key, []), min(key, now_s))
+            hours.append(
+                {
+                    "time": key,
+                    "observed": observed.get(key) if h + HOUR <= now else None,
+                    "ia": ia
+                    and {
+                        "value": ia["value"],
+                        "probability": ia["storm_probability"],
+                        "alert": bool(ia["storm_alert"]),
+                        "issued": ia["time"],
+                        "horizon_hours": ia["horizon_hours"],
+                    },
+                }
+            )
+        days.append({"date": d.isoformat(), "hours": hours})
+    return {"generated_at": now_s, "storm_threshold": DST_STORM, "days": days}

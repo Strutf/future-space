@@ -508,7 +508,7 @@ molde em `src/futurespace/api/web/pages`, encaixado em `web/base.html`, e o tema
 | Página | Português | Inglês | Espanhol | Francês | O que mostra |
 |---|---|---|---|---|---|
 | Home | `/` | `/en` | `/es` | `/fr` | O que o projeto faz, como funciona e a previsão do momento |
-| Previsões | `/dashboard` | `/en/dashboard` | `/es/dashboard` | `/fr/dashboard` | Kp previsto pela IA e pela NOAA para ontem, hoje e amanhã, com o observado e quem chegou mais perto |
+| Previsões | `/dashboard` | `/en/dashboard` | `/es/dashboard` | `/fr/dashboard` | Três abas: Kp (padrão; IA × NOAA × observado), chance de tempestade da IA e Dst hora a hora, para ontem, hoje e amanhã |
 | Sobre | `/sobre` | `/en/about` | `/es/acerca` | `/fr/a-propos` | Como acontece uma tempestade solar, o que são Kp, Dst e CME, e todas as fórmulas |
 | Interativo | `/interativo` | `/en/interactive` | `/es/interactivo` | `/fr/interactif` | Em breve |
 

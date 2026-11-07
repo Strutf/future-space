@@ -56,7 +56,19 @@
     "legend_ia": "IA Future Space",
     "legend_noaa": "NOAA",
     "legend_g1": "Línea de tormenta (G1)",
-    "table_toggle": "Ver los números en una tabla"
+    "table_toggle": "Ver los números en una tabla",
+    "tabs_aria": "Elegir el gráfico",
+    "tab_kp": "Kp",
+    "tab_prob": "Probabilidad de tormenta",
+    "tab_dst": "Dst",
+    "prob_title": "Probabilidad de tormenta cada 3 horas (IA)",
+    "prob_hint": "La probabilidad, calculada por la IA, de que el Kp llegue a 5 o más en cada bloque. El \"!\" marca los bloques donde la probabilidad pasó el umbral y dio alerta; la ★ marca dónde la tormenta pasó de verdad. La NOAA no publica probabilidad por bloque.",
+    "dst_title": "Dst hora a hora: ayer, hoy y mañana",
+    "dst_hint": "El índice que mejor muestra el efecto de las tormentas cerca del ecuador, como en Brasil. Cuanto más negativo, más fuerte; por debajo de −50 nT es tormenta. Solo la IA pronostica el Dst: la NOAA no publica ese pronóstico.",
+    "legend_prob": "Probabilidad de tormenta (IA)",
+    "legend_alert": "Alerta de la IA",
+    "legend_storm_real": "Hubo tormenta de verdad",
+    "legend_dst_line": "Línea de tormenta (−50 nT)"
   },
   "sobre": {
     "title": "Sobre los pronósticos",
@@ -192,7 +204,6 @@
     "yesterday_label": "Ayer",
     "today_label": "Hoy",
     "now": "ahora",
-    "storm_line": "tormenta (G1)",
     "chart_aria": "Kp observado y pronosticado por la IA y por la NOAA, por bloque de 3 horas, ayer, hoy y mañana",
     "tip_observed": "Pasó",
     "tip_not_yet": "todavía no",
@@ -213,6 +224,15 @@
     "block_at": "bloque de las {hour} UTC ({when})",
     "ia_chance": " · probabilidad de tormenta: {pct}%",
     "tomorrow": "mañana",
-    "tomorrow_label": "Mañana"
+    "tomorrow_label": "Mañana",
+    "chart_aria_prob": "Probabilidad de tormenta pronosticada por la IA, por bloque de 3 horas, con las alertas y las tormentas que ocurrieron",
+    "chart_aria_dst": "Dst observado y pronosticado por la IA, hora a hora",
+    "tip_chance": "Probabilidad de tormenta",
+    "tip_alert": "Alerta",
+    "tip_storm_real": "¿Hubo tormenta?",
+    "th_hour": "Hora (UTC)",
+    "th_chance": "Probabilidad (IA)",
+    "th_alert": "Alerta",
+    "th_storm_real": "¿Hubo tormenta?"
   }
 }

@@ -72,3 +72,22 @@ def test_next_block_shows_both_sources_for_the_same_block():
     assert nxt["ia"]["value"] == 2.3
     assert (nxt["noaa"]["value"], nxt["noaa"]["scale"]) == (5.0, "G1")
     assert [d["summary"]["date"] for d in result["days"]] == ["2026-11-06", "2026-11-07", "2026-11-08"]
+
+
+def test_dst_hours_use_last_forecast_before_each_hour():
+    hour = "2026-11-07T05:00:00Z"
+    dst_pred = {"target": "dst", "horizon_hours": 3, "storm_probability": 0.2, "storm_alert": False, "model_version": "v"}
+    result = compare.build_dst(
+        predictions=[
+            {**dst_pred, "time": "2026-11-07T02:00:00Z", "target_time": hour, "value": -30.0},
+            {**dst_pred, "time": "2026-11-07T04:00:00Z", "target_time": hour, "value": -42.0},
+            {**dst_pred, "time": "2026-11-07T06:00:00Z", "target_time": hour, "value": -99.0},  # depois: ignorada
+        ],
+        dst_observed=[{"time": hour, "dst": -45.0}, {"time": "2026-11-07T10:00:00Z", "dst": -60.0}],
+        day=date(2026, 11, 7),
+        now=NOW,
+    )
+    today = result["days"][1]["hours"]
+    assert len(today) == 24 and result["storm_threshold"] == -50.0
+    assert (today[5]["ia"]["value"], today[5]["observed"]) == (-42.0, -45.0)
+    assert today[10]["observed"] is None  # hora 10h-11h ainda em andamento às 10h30

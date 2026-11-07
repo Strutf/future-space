@@ -56,7 +56,19 @@
     "legend_ia": "IA Future Space",
     "legend_noaa": "NOAA",
     "legend_g1": "Ligne de tempête (G1)",
-    "table_toggle": "Voir les chiffres dans un tableau"
+    "table_toggle": "Voir les chiffres dans un tableau",
+    "tabs_aria": "Choisir le graphique",
+    "tab_kp": "Kp",
+    "tab_prob": "Risque de tempête",
+    "tab_dst": "Dst",
+    "prob_title": "Risque de tempête toutes les 3 heures (IA)",
+    "prob_hint": "La probabilité, calculée par l'IA, que le Kp atteigne 5 ou plus dans chaque bloc. Le « ! » marque les blocs où le risque a dépassé le seuil et où elle a donné l'alerte ; l'★ marque là où la tempête a vraiment eu lieu. La NOAA ne publie pas de probabilité par bloc.",
+    "dst_title": "Dst heure par heure : hier, aujourd'hui et demain",
+    "dst_hint": "L'indice qui montre le mieux l'effet des tempêtes près de l'équateur, comme au Brésil. Plus il est négatif, plus c'est fort ; en dessous de −50 nT, c'est une tempête. Seule l'IA prévoit le Dst : la NOAA ne publie pas cette prévision.",
+    "legend_prob": "Risque de tempête (IA)",
+    "legend_alert": "Alerte de l'IA",
+    "legend_storm_real": "Il y a vraiment eu une tempête",
+    "legend_dst_line": "Ligne de tempête (−50 nT)"
   },
   "sobre": {
     "title": "À propos des prévisions",
@@ -192,7 +204,6 @@
     "yesterday_label": "Hier",
     "today_label": "Aujourd'hui",
     "now": "maintenant",
-    "storm_line": "tempête (G1)",
     "chart_aria": "Kp observé et prévu par l'IA et par la NOAA, par bloc de 3 heures, hier, aujourd'hui et demain",
     "tip_observed": "Observé",
     "tip_not_yet": "pas encore",
@@ -213,6 +224,15 @@
     "block_at": "bloc de {hour} UTC ({when})",
     "ia_chance": " · probabilité de tempête : {pct} %",
     "tomorrow": "demain",
-    "tomorrow_label": "Demain"
+    "tomorrow_label": "Demain",
+    "chart_aria_prob": "Risque de tempête prévu par l'IA, par bloc de 3 heures, avec les alertes et les tempêtes qui ont eu lieu",
+    "chart_aria_dst": "Dst observé et prévu par l'IA, heure par heure",
+    "tip_chance": "Risque de tempête",
+    "tip_alert": "Alerte",
+    "tip_storm_real": "Y a-t-il eu une tempête ?",
+    "th_hour": "Heure (UTC)",
+    "th_chance": "Risque (IA)",
+    "th_alert": "Alerte",
+    "th_storm_real": "Tempête ?"
   }
 }

@@ -42,6 +42,21 @@
   th { color: var(--chalk-yellow); font-weight: 400; }
   td.num { font-variant-numeric: tabular-nums; }
   .empty { color: var(--chalk-muted); text-align: center; padding: 32px 0; }
+  /* Abas de giz para escolher o gráfico */
+  .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+  .tab {
+    font: 19px var(--hand); color: var(--chalk-soft); background: transparent; cursor: pointer;
+    padding: 4px 16px; border: 2px solid var(--chalk-line);
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+  .tab:hover { color: var(--chalk); border-color: var(--chalk-soft); }
+  .tab[aria-selected="true"] { color: var(--board); background: var(--chalk-yellow); border-color: var(--chalk-yellow); transform: rotate(-1.5deg); }
+  .tab:focus-visible { outline: 2px dashed var(--chalk-blue); outline-offset: 3px; }
+  .key.prob { background: var(--series-ia); border-radius: 3px 3px 0 0; height: 16px; }
+  .key.alert { width: 16px; height: 16px; border-radius: 50%; background: var(--critical); color: #fff; font: 12px/16px var(--marker); text-align: center; }
+  .key.storm { width: auto; height: auto; color: var(--critical); font-size: 16px; line-height: 1; }
+  .key.dstline { width: 22px; height: 0; border-top: 3px solid var(--series-observed); }
+  [hidden] { display: none !important; }
 </style>
 
 <section class="head">
@@ -58,15 +73,42 @@
 </section>
 
 <section class="panel box">
-  <h2 class="chalk-text">{{t:dashboard.chart_title}}</h2>
-  <p class="hint">{{t:dashboard.chart_hint}}</p>
-  <div class="legend" aria-hidden="true">
-    <span><i class="key observed"></i>{{t:dashboard.legend_observed}}</span>
-    <span><i class="key ia"></i>{{t:dashboard.legend_ia}}</span>
-    <span><i class="key noaa"></i>{{t:dashboard.legend_noaa}}</span>
-    <span><i class="key g1"></i>{{t:dashboard.legend_g1}}</span>
+  <div class="tabs" role="tablist" aria-label="{{t:dashboard.tabs_aria}}">
+    <button class="tab" role="tab" id="tab-kp" data-view="kp" aria-selected="true" aria-controls="chart">{{t:dashboard.tab_kp}}</button>
+    <button class="tab" role="tab" id="tab-chance" data-view="chance" aria-selected="false" tabindex="-1" aria-controls="chart">{{t:dashboard.tab_prob}}</button>
+    <button class="tab" role="tab" id="tab-dst" data-view="dst" aria-selected="false" tabindex="-1" aria-controls="chart">{{t:dashboard.tab_dst}}</button>
   </div>
-  <div class="chart" id="chart"><div class="empty">{{t:dashboard.loading}}</div></div>
+
+  <div data-for="kp">
+    <h2 class="chalk-text">{{t:dashboard.chart_title}}</h2>
+    <p class="hint">{{t:dashboard.chart_hint}}</p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="key observed"></i>{{t:dashboard.legend_observed}}</span>
+      <span><i class="key ia"></i>{{t:dashboard.legend_ia}}</span>
+      <span><i class="key noaa"></i>{{t:dashboard.legend_noaa}}</span>
+      <span><i class="key g1"></i>{{t:dashboard.legend_g1}}</span>
+    </div>
+  </div>
+  <div data-for="chance" hidden>
+    <h2 class="chalk-text">{{t:dashboard.prob_title}}</h2>
+    <p class="hint">{{t:dashboard.prob_hint}}</p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="key prob"></i>{{t:dashboard.legend_prob}}</span>
+      <span><i class="key alert">!</i>{{t:dashboard.legend_alert}}</span>
+      <span><i class="key storm">★</i>{{t:dashboard.legend_storm_real}}</span>
+    </div>
+  </div>
+  <div data-for="dst" hidden>
+    <h2 class="chalk-text">{{t:dashboard.dst_title}}</h2>
+    <p class="hint">{{t:dashboard.dst_hint}}</p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="key dstline"></i>{{t:dashboard.legend_observed}}</span>
+      <span><i class="key ia"></i>{{t:dashboard.legend_ia}}</span>
+      <span><i class="key g1"></i>{{t:dashboard.legend_dst_line}}</span>
+    </div>
+  </div>
+
+  <div class="chart" id="chart" role="tabpanel"><div class="empty">{{t:dashboard.loading}}</div></div>
   <details class="table">
     <summary>{{t:dashboard.table_toggle}}</summary>
     <div class="table-wrap"><table id="table"></table></div>
@@ -119,28 +161,28 @@ function renderTiles(cmp) {
 }
 
 const DAY_NAMES = ["yesterday_label", "today_label", "tomorrow_label"];
+const VIEWS = ["kp", "chance", "dst"];
+const HOUR_MS = 3600000;
+const ns = "http://www.w3.org/2000/svg";
+let view = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "kp"; // padrão: Kp
+let lastCmp = null, lastDst = null;
 
-function renderChart(cmp) {
+// Moldura comum às três abas: mesma linha do tempo, separadores de dia, horários e "agora".
+function frame(daysIso, generatedAt, yTicks, yFmt) {
   const chart = document.getElementById("chart");
   const W = Math.max(chart.clientWidth, 300);
-  // No celular cabem menos blocos: mostra só hoje e amanhã (ontem segue na tabela e no cartão).
-  const narrow = W < 600;
-  const days = cmp.days.map((d, i) => ({ ...d, name: DAY_NAMES[i] })).slice(narrow ? 1 : 0);
-  const blocks = days.flatMap((d) => d.blocks);
-  const H = narrow ? 260 : 340, m = { top: 32, right: 16, bottom: 40, left: 30 };
+  const narrow = W < 600; // no celular: só hoje e amanhã
+  const first = narrow ? 1 : 0;
+  const days = daysIso.slice(first).map((iso, i) => ({ iso, name: DAY_NAMES[i + first] }));
+  const H = narrow ? 260 : 340, m = { top: 32, right: 16, bottom: 40, left: 38 };
   const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
-  const band = iw / blocks.length;
-  const labelEvery = band < 40 ? 4 : 2;
-  const y = (v) => m.top + ih - (v / 9) * ih;
-  const x = (i) => m.left + i * band;
-  const barW = Math.min(24, band * 0.55);
-  const ns = "http://www.w3.org/2000/svg";
+  const t0 = Date.parse(days[0].iso), span = days.length * 24 * HOUR_MS;
+  const x = (iso) => m.left + ((Date.parse(iso) - t0) / span) * iw;
+  const [lo, hi] = [yTicks[0], yTicks[yTicks.length - 1]];
+  const y = (v) => m.top + ih - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * ih;
+
   const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  svg.setAttribute("width", W);
-  svg.setAttribute("height", H);
-  svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", t("chart_aria"));
+  Object.entries({ viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img" }).forEach(([k, v]) => svg.setAttribute(k, v));
   const add = (tag, attrs, text, parent = svg) => {
     const el = document.createElementNS(ns, tag);
     for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
@@ -148,68 +190,160 @@ function renderChart(cmp) {
     parent.appendChild(el);
     return el;
   };
-
-  // Hachura de giz de cera para as barras do observado.
-  const defs = add("defs", {});
-  const pat = add("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, null, defs);
-  add("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: css("--series-observed"), "stroke-width": 3 }, null, pat);
-
   const chalk = add("g", { filter: "url(#wobble)" });
-  for (const v of [0, 3, 6, 9]) {
-    add("line", { x1: m.left, x2: W - m.right, y1: y(v), y2: y(v), stroke: v ? "rgba(241,239,231,0.14)" : "rgba(241,239,231,0.5)", "stroke-width": v ? 1 : 2 }, null, chalk);
-    add("text", { x: m.left - 8, y: y(v) + 5, "text-anchor": "end" }, v);
+  for (const v of yTicks) {
+    const base = v === 0 || v === lo;
+    add("line", { x1: m.left, x2: W - m.right, y1: y(v), y2: y(v), stroke: base ? "rgba(241,239,231,0.5)" : "rgba(241,239,231,0.14)", "stroke-width": base ? 2 : 1 }, null, chalk);
+    add("text", { x: m.left - 8, y: y(v) + 5, "text-anchor": "end" }, yFmt(v));
   }
-  add("line", { x1: m.left, x2: W - m.right, y1: y(cmp.storm_threshold), y2: y(cmp.storm_threshold), stroke: css("--critical"), "stroke-width": 2 }, null, chalk);
-  add("text", { x: W - m.right, y: y(cmp.storm_threshold) - 7, "text-anchor": "end" }, t("storm_line"));
-
+  const blockW = iw / (days.length * 8);
+  const labelEvery = blockW < 40 ? 12 : 6; // horas entre rótulos do eixo
   days.forEach((d, i) => {
-    const x0 = x(i * 8);
+    const x0 = x(d.iso);
     if (i) add("line", { x1: x0, x2: x0, y1: m.top - 24, y2: H - m.bottom, stroke: "rgba(241,239,231,0.4)", "stroke-width": 2, "stroke-dasharray": "6 6" }, null, chalk);
-    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(d.name) + " " + dayLabel(d.blocks[0].block));
-  });
-
-  blocks.forEach((b, i) => {
-    const cx = x(i) + band / 2;
-    if (i % labelEvery === 0) add("text", { x: cx, y: H - m.bottom + 22, "text-anchor": "middle" }, hour(b.block));
-    if (b.observed != null) {
-      const top = y(b.observed), h = y(0) - top, r = Math.min(4, h);
-      add("path", {
-        d: `M${cx - barW / 2},${y(0)} V${top + r} q0,-${r} ${r},-${r} H${cx + barW / 2 - r} q${r},0 ${r},${r} V${y(0)} Z`,
-        fill: "url(#hatch)", stroke: css("--series-observed"), "stroke-width": 2,
-      }, null, chalk);
+    add("text", { x: x0 + 8, y: m.top - 12, class: "day-label" }, t(d.name) + " " + dayLabel(d.iso));
+    for (let h = 0; h < 24; h += labelEvery) {
+      const iso = new Date(t0 + (i * 24 + h) * HOUR_MS).toISOString();
+      add("text", { x: x(iso) + blockW / 2, y: H - m.bottom + 22, "text-anchor": "middle" }, hour(iso));
     }
-    const off = Math.min(7, band / 4);
-    if (b.ia) add("circle", { cx: cx - off, cy: y(b.ia.value), r: 6, fill: css("--series-ia"), stroke: css("--board"), "stroke-width": 2 });
-    if (b.noaa) add("rect", { x: cx + off - 6, y: y(b.noaa.value) - 6, width: 12, height: 12, fill: css("--series-noaa"), stroke: css("--board"), "stroke-width": 2 });
-    const hit = add("rect", { x: x(i), y: m.top, width: band, height: ih, fill: "transparent" });
-    hit.addEventListener("mousemove", (e) => showTip(e, b));
-    hit.addEventListener("mouseleave", hideTip);
   });
-
-  const elapsed = (Date.parse(cmp.generated_at) - Date.parse(blocks[0].block)) / 10800000;
-  if (elapsed > 0 && elapsed < blocks.length) {
-    const nx = x(0) + band * elapsed;
-    add("line", { x1: nx, x2: nx, y1: m.top, y2: H - m.bottom, stroke: css("--chalk-yellow"), "stroke-width": 2 }, null, chalk);
-    add("text", { x: nx - 5, y: m.top + 14, "text-anchor": "end", fill: css("--chalk-yellow") }, t("now"));
-  }
-
-  chart.replaceChildren(svg, Object.assign(document.createElement("div"), { className: "tooltip", id: "tip" }));
+  const nowX = x(generatedAt);
+  const drawNow = () => {
+    if (nowX > m.left && nowX < W - m.right) {
+      add("line", { x1: nowX, x2: nowX, y1: m.top, y2: H - m.bottom, stroke: css("--chalk-yellow"), "stroke-width": 2 }, null, chalk);
+      add("text", { x: nowX - 5, y: m.top + 14, "text-anchor": "end", fill: css("--chalk-yellow") }, t("now"));
+    }
+  };
+  const hit = (iso, widthMs, data) => {
+    const r = add("rect", { x: x(iso), y: m.top, width: (widthMs / span) * iw, height: ih, fill: "transparent" });
+    r.addEventListener("mousemove", (e) => showTip(e, data));
+    r.addEventListener("mouseleave", hideTip);
+  };
+  const inRange = (iso) => Date.parse(iso) >= t0;
+  return { chart, svg, add, chalk, x, y, m, W, H, blockW, drawNow, hit, inRange };
 }
 
-function showTip(e, b) {
+function finish(f, aria) {
+  f.svg.setAttribute("aria-label", aria);
+  f.chart.replaceChildren(f.svg, Object.assign(document.createElement("div"), { className: "tooltip", id: "tip" }));
+}
+
+function hatch(f) {
+  const defs = f.add("defs", {});
+  const pat = f.add("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, null, defs);
+  f.add("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: css("--series-observed"), "stroke-width": 3 }, null, pat);
+}
+
+function bar(f, cx, top, bottom, w, attrs) {
+  const r = Math.min(4, Math.max(0, bottom - top));
+  f.add("path", { d: `M${cx - w / 2},${bottom} V${top + r} q0,-${r} ${r},-${r} H${cx + w / 2 - r} q${r},0 ${r},${r} V${bottom} Z`, ...attrs }, null, f.chalk);
+}
+
+const daysOf = (cmp) => cmp.days.map((d) => d.blocks[0].block);
+
+function renderKp(cmp) {
+  const f = frame(daysOf(cmp), cmp.generated_at, [0, 3, 6, 9], (v) => v);
+  hatch(f);
+  f.add("line", { x1: f.m.left, x2: f.W - f.m.right, y1: f.y(cmp.storm_threshold), y2: f.y(cmp.storm_threshold), stroke: css("--critical"), "stroke-width": 2 }, null, f.chalk);
+  const barW = Math.min(24, f.blockW * 0.55), off = Math.min(7, f.blockW / 4);
+  cmp.days.flatMap((d) => d.blocks).filter((b) => f.inRange(b.block)).forEach((b) => {
+    const cx = f.x(b.block) + f.blockW / 2;
+    if (b.observed != null) bar(f, cx, f.y(b.observed), f.y(0), barW, { fill: "url(#hatch)", stroke: css("--series-observed"), "stroke-width": 2 });
+    if (b.ia) f.add("circle", { cx: cx - off, cy: f.y(b.ia.value), r: 6, fill: css("--series-ia"), stroke: css("--board"), "stroke-width": 2 });
+    if (b.noaa) f.add("rect", { x: cx + off - 6, y: f.y(b.noaa.value) - 6, width: 12, height: 12, fill: css("--series-noaa"), stroke: css("--board"), "stroke-width": 2 });
+    f.hit(b.block, 3 * HOUR_MS, { kind: "kp", b });
+  });
+  f.drawNow();
+  finish(f, t("chart_aria"));
+}
+
+function renderChance(cmp) {
+  const f = frame(daysOf(cmp), cmp.generated_at, [0, 25, 50, 75, 100], (v) => v + "%");
+  const barW = Math.min(24, f.blockW * 0.55);
+  cmp.days.flatMap((d) => d.blocks).filter((b) => f.inRange(b.block)).forEach((b) => {
+    const cx = f.x(b.block) + f.blockW / 2;
+    if (b.ia) {
+      const pct = 100 * b.ia.probability;
+      bar(f, cx, f.y(pct), f.y(0), barW, { fill: css("--series-ia"), stroke: css("--series-ia"), "stroke-width": 1 });
+      if (b.ia.alert) {
+        const cy = f.y(pct) - 14;
+        f.add("circle", { cx, cy, r: 9, fill: css("--critical"), stroke: css("--board"), "stroke-width": 2 });
+        f.add("text", { x: cx, y: cy + 5, "text-anchor": "middle", fill: "#fff", "font-family": "var(--marker)" }, "!");
+      }
+    }
+    if (b.observed != null && b.observed >= cmp.storm_threshold) {
+      f.add("text", { x: cx, y: f.m.top + 6, "text-anchor": "middle", fill: css("--critical"), "font-size": 18 }, "★");
+    }
+    f.hit(b.block, 3 * HOUR_MS, { kind: "chance", b, threshold: cmp.storm_threshold });
+  });
+  f.drawNow();
+  finish(f, t("chart_aria_prob"));
+}
+
+function niceTicks(lo, hi) {
+  const step = [10, 20, 25, 50, 100, 200].find((s) => (hi - lo) / s <= 5) || 500;
+  const start = Math.floor(lo / step) * step, end = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = start; v <= end; v += step) ticks.push(v);
+  return ticks;
+}
+
+function renderDst(dst) {
+  const hours = dst.days.flatMap((d) => d.hours);
+  const values = hours.flatMap((h) => [h.observed, h.ia && h.ia.value]).filter((v) => v != null);
+  const ticks = niceTicks(Math.min(dst.storm_threshold - 10, ...values), Math.max(20, ...values));
+  const f = frame(dst.days.map((d) => d.date + "T00:00:00Z"), dst.generated_at, ticks, (v) => v);
+  f.add("line", { x1: f.m.left, x2: f.W - f.m.right, y1: f.y(dst.storm_threshold), y2: f.y(dst.storm_threshold), stroke: css("--critical"), "stroke-width": 2 }, null, f.chalk);
+  const visible = hours.filter((h) => f.inRange(h.time));
+  const hourW = f.blockW / 3;
+  // Linha do observado, interrompida onde falta dado.
+  let path = "";
+  visible.forEach((h, i) => {
+    if (h.observed == null) return;
+    const px = f.x(h.time) + hourW / 2, py = f.y(h.observed);
+    path += (i && visible[i - 1].observed != null ? "L" : "M") + px.toFixed(1) + "," + py.toFixed(1);
+  });
+  if (path) f.add("path", { d: path, fill: "none", stroke: css("--series-observed"), "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }, null, f.chalk);
+  visible.forEach((h) => {
+    if (h.ia) f.add("circle", { cx: f.x(h.time) + hourW / 2, cy: f.y(h.ia.value), r: 4, fill: css("--series-ia"), stroke: css("--board"), "stroke-width": 2 });
+    f.hit(h.time, HOUR_MS, { kind: "dst", h, threshold: dst.storm_threshold });
+  });
+  f.drawNow();
+  finish(f, t("chart_aria_dst"));
+}
+
+function showTip(e, d) {
   const tip = document.getElementById("tip");
-  const end = String((Number(b.block.slice(11, 13)) + 3) % 24).padStart(2, "0") + window.T.hourSuffix;
   const row = (cls, label, val) => `<div class="row"><i class="key ${cls}"></i>${label}: <b>${val}</b></div>`;
-  tip.innerHTML = `<b>${dayLabel(b.block)}, ${hour(b.block)}–${end} UTC</b>` +
-    row("observed", t("tip_observed"), b.observed == null ? t("tip_not_yet") : fmt(b.observed)) +
-    row("ia", t("tip_ia"), b.ia ? `${fmt(b.ia.value)} ${t("tip_storm", { pct: fmt(100 * b.ia.probability, 0) })}` : t("tip_none")) +
-    row("noaa", t("tip_noaa"), b.noaa ? fmt(b.noaa.value) + (b.noaa.scale ? ` ${b.noaa.scale}` : "") : t("tip_none"));
+  const span = (iso, hrs) => {
+    const end = String((Number(iso.slice(11, 13)) + hrs) % 24).padStart(2, "0") + window.T.hourSuffix;
+    return `<b>${dayLabel(iso)}, ${hour(iso)}–${end} UTC</b>`;
+  };
+  if (d.kind === "kp") {
+    const b = d.b;
+    tip.innerHTML = span(b.block, 3) +
+      row("observed", t("tip_observed"), b.observed == null ? t("tip_not_yet") : fmt(b.observed)) +
+      row("ia", t("tip_ia"), b.ia ? `${fmt(b.ia.value)} ${t("tip_storm", { pct: fmt(100 * b.ia.probability, 0) })}` : t("tip_none")) +
+      row("noaa", t("tip_noaa"), b.noaa ? fmt(b.noaa.value) + (b.noaa.scale ? ` ${b.noaa.scale}` : "") : t("tip_none"));
+  } else if (d.kind === "chance") {
+    const b = d.b;
+    const happened = b.observed == null ? t("tip_not_yet") : t(b.observed >= d.threshold ? "yes" : "no") + ` (Kp ${fmt(b.observed)})`;
+    tip.innerHTML = span(b.block, 3) +
+      row("prob", t("tip_chance"), b.ia ? fmt(100 * b.ia.probability, 0) + "%" : t("tip_none")) +
+      row("alert", t("tip_alert"), b.ia ? t(b.ia.alert ? "yes" : "no") : "–") +
+      row("storm", t("tip_storm_real"), happened);
+  } else {
+    const h = d.h;
+    tip.innerHTML = span(h.time, 1) +
+      row("dstline", t("tip_observed"), h.observed == null ? t("tip_not_yet") : fmt(h.observed, 0) + " nT") +
+      row("ia", t("tip_ia"), h.ia ? `${fmt(h.ia.value, 0)} nT ${t("tip_storm", { pct: fmt(100 * h.ia.probability, 0) })}` : t("tip_none"));
+  }
   const box = document.getElementById("chart").getBoundingClientRect();
   tip.style.display = "block";
   tip.style.left = Math.max(0, Math.min(e.clientX - box.left + 14, box.width - tip.offsetWidth - 4)) + "px";
   tip.style.top = (e.clientY - box.top + 14) + "px";
 }
-function hideTip() { document.getElementById("tip").style.display = "none"; }
+function hideTip() { const tip = document.getElementById("tip"); if (tip) tip.style.display = "none"; }
 
 function closest(b) {
   if (b.observed == null || !b.ia || !b.noaa) return "–";
@@ -217,27 +351,67 @@ function closest(b) {
   return Math.abs(di - dn) < 0.05 ? t("closest_tie") : (di < dn ? t("th_ia") : t("th_noaa"));
 }
 
-function renderTable(cmp) {
-  const rows = cmp.days.flatMap((d) => d.blocks).map((b) => `<tr>
-    <td>${dayLabel(b.block)}</td><td>${hour(b.block)}</td>
-    <td class="num">${b.observed == null ? "–" : fmt(b.observed)}</td>
-    <td class="num">${b.ia ? fmt(b.ia.value) : "–"}</td>
-    <td class="num">${b.noaa ? fmt(b.noaa.value) : "–"}</td>
-    <td>${closest(b)}</td></tr>`).join("");
-  document.getElementById("table").innerHTML =
-    `<thead><tr>${["th_day", "th_block", "th_observed", "th_ia", "th_noaa", "th_closest"].map((k) => `<th>${t(k)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody>`;
+function renderTable() {
+  const head = (keys) => `<thead><tr>${keys.map((k) => `<th>${t(k)}</th>`).join("")}</tr></thead>`;
+  let html = "";
+  if (view === "dst" && lastDst) {
+    const rows = lastDst.days.flatMap((d) => d.hours).map((h) => `<tr><td>${dayLabel(h.time)}</td><td>${hour(h.time)}</td>
+      <td class="num">${h.observed == null ? "–" : fmt(h.observed, 0)}</td><td class="num">${h.ia ? fmt(h.ia.value, 0) : "–"}</td></tr>`).join("");
+    html = head(["th_day", "th_hour", "th_observed", "th_ia"]) + `<tbody>${rows}</tbody>`;
+  } else if (view === "chance" && lastCmp) {
+    const rows = lastCmp.days.flatMap((d) => d.blocks).map((b) => `<tr><td>${dayLabel(b.block)}</td><td>${hour(b.block)}</td>
+      <td class="num">${b.ia ? fmt(100 * b.ia.probability, 0) + "%" : "–"}</td><td>${b.ia ? t(b.ia.alert ? "yes" : "no") : "–"}</td>
+      <td>${b.observed == null ? "–" : t(b.observed >= lastCmp.storm_threshold ? "yes" : "no")}</td></tr>`).join("");
+    html = head(["th_day", "th_block", "th_chance", "th_alert", "th_storm_real"]) + `<tbody>${rows}</tbody>`;
+  } else if (lastCmp) {
+    const rows = lastCmp.days.flatMap((d) => d.blocks).map((b) => `<tr><td>${dayLabel(b.block)}</td><td>${hour(b.block)}</td>
+      <td class="num">${b.observed == null ? "–" : fmt(b.observed)}</td><td class="num">${b.ia ? fmt(b.ia.value) : "–"}</td>
+      <td class="num">${b.noaa ? fmt(b.noaa.value) : "–"}</td><td>${closest(b)}</td></tr>`).join("");
+    html = head(["th_day", "th_block", "th_observed", "th_ia", "th_noaa", "th_closest"]) + `<tbody>${rows}</tbody>`;
+  }
+  document.getElementById("table").innerHTML = html;
 }
 
-let lastCmp = null;
+function renderChart() {
+  if (view === "dst") { if (lastDst) renderDst(lastDst); }
+  else if (lastCmp) (view === "chance" ? renderChance : renderKp)(lastCmp);
+}
+
+function setView(next, focus = false) {
+  view = next;
+  document.querySelectorAll(".tab").forEach((tab) => {
+    const on = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    if (on && focus) tab.focus();
+  });
+  document.querySelectorAll("[data-for]").forEach((el) => { el.hidden = el.dataset.for !== view; });
+  document.getElementById("chart").setAttribute("aria-labelledby", "tab-" + view);
+  history.replaceState(null, "", view === "kp" ? location.pathname : "#" + view);
+  renderChart();
+  renderTable();
+}
+
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => setView(tab.dataset.view));
+  tab.addEventListener("keydown", (e) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    setView(VIEWS[(VIEWS.indexOf(view) + step + VIEWS.length) % VIEWS.length], true);
+  });
+});
 
 async function load() {
   try {
-    const [cmp, latest] = await Promise.all([getJson("/v1/compare/kp"), getJson("/v1/datasets/predictions/latest")]);
+    const [cmp, dst, latest] = await Promise.all([
+      getJson("/v1/compare/kp"), getJson("/v1/compare/dst"), getJson("/v1/datasets/predictions/latest"),
+    ]);
     if (!cmp) throw new Error("sem dados");
     lastCmp = cmp;
+    lastDst = dst;
     renderTiles(cmp);
-    renderChart(cmp);
-    renderTable(cmp);
+    setView(view);
     const updated = new Date(cmp.generated_at);
     document.getElementById("meta").textContent =
       t("updated", { time: updated.toLocaleTimeString(window.T.locale, { hour: "2-digit", minute: "2-digit" }) }) +
@@ -250,7 +424,7 @@ async function load() {
 let resizeTimer;
 addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => lastCmp && renderChart(lastCmp), 150);
+  resizeTimer = setTimeout(renderChart, 150);
 });
 
 load();

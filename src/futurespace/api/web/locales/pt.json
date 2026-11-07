@@ -56,7 +56,19 @@
     "legend_ia": "IA Future Space",
     "legend_noaa": "NOAA",
     "legend_g1": "Linha da tempestade (G1)",
-    "table_toggle": "Ver os números em tabela"
+    "table_toggle": "Ver os números em tabela",
+    "tabs_aria": "Escolher o gráfico",
+    "tab_kp": "Kp",
+    "tab_prob": "Chance de tempestade",
+    "tab_dst": "Dst",
+    "prob_title": "Chance de tempestade de 3 em 3 horas (IA)",
+    "prob_hint": "A probabilidade, calculada pela IA, de o Kp chegar a 5 ou mais em cada bloco. O \"!\" marca os blocos em que a chance passou do limiar e ela deu alerta; a ★ marca onde a tempestade aconteceu de verdade. A NOAA não publica chance por bloco.",
+    "dst_title": "Dst hora a hora: ontem, hoje e amanhã",
+    "dst_hint": "O índice que melhor mostra o efeito das tempestades perto do equador, como no Brasil. Quanto mais negativo, mais forte; abaixo de −50 nT é tempestade. Só a IA prevê o Dst: a NOAA não publica essa previsão.",
+    "legend_prob": "Chance de tempestade (IA)",
+    "legend_alert": "Alerta da IA",
+    "legend_storm_real": "Teve tempestade de verdade",
+    "legend_dst_line": "Linha da tempestade (−50 nT)"
   },
   "sobre": {
     "title": "Sobre as previsões",
@@ -192,7 +204,6 @@
     "yesterday_label": "Ontem",
     "today_label": "Hoje",
     "now": "agora",
-    "storm_line": "tempestade (G1)",
     "chart_aria": "Kp observado e previsto pela IA e pela NOAA, por bloco de 3 horas, ontem e hoje",
     "tip_observed": "Aconteceu",
     "tip_not_yet": "ainda não",
@@ -213,6 +224,15 @@
     "block_at": "bloco das {hour} UTC ({when})",
     "ia_chance": " · chance de tempestade: {pct}%",
     "tomorrow": "amanhã",
-    "tomorrow_label": "Amanhã"
+    "tomorrow_label": "Amanhã",
+    "chart_aria_prob": "Chance de tempestade prevista pela IA, por bloco de 3 horas, com os alertas e as tempestades que aconteceram",
+    "chart_aria_dst": "Dst observado e previsto pela IA, hora a hora",
+    "tip_chance": "Chance de tempestade",
+    "tip_alert": "Alerta",
+    "tip_storm_real": "Teve tempestade?",
+    "th_hour": "Hora (UTC)",
+    "th_chance": "Chance (IA)",
+    "th_alert": "Alerta",
+    "th_storm_real": "Teve tempestade?"
   }
 }
