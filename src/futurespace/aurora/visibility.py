@@ -154,7 +154,7 @@ def compute(
                     "latitude": site.lat,
                     "longitude": site.lon,
                     "mag_lat": round(m, 2),
-                    "kp_expected": kp_values[i],
+                    "kp_expected": round(float(kp_values[i]), 2),
                     "kp_source": kp_sources[i],
                     "kp_needed": round(need, 2) if np.isfinite(need) else np.nan,
                     "ovation_nearby": nearby if lead <= OVATION_LEADS else np.nan,
