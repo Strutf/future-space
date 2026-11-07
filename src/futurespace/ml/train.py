@@ -8,25 +8,34 @@ Para cada índice e horizonte são treinados dois modelos:
 Divisão temporal (nunca aleatória, para não vazar informação do futuro):
 treino 1995-2014, validação 2015-2018 (hiperparâmetros e limiar), teste 2019 em diante.
 O modelo final é re-treinado em treino+validação e avaliado uma única vez no teste.
+
+Cada treino guarda no relatório o que é preciso para reproduzi-lo e compará-lo com os outros:
+commit do código, hiperparâmetros, versões das bibliotecas e o peso de cada grupo de variáveis.
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import platform
+import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 
 from futurespace.ml import metrics
 from futurespace.ml.features import (
     DST_STORM,
+    FEATURE_GROUPS,
     FEATURE_VERSION,
     KP_STORM,
     build_features,
     build_targets,
+    feature_group,
     persistence,
 )
 
@@ -39,6 +48,9 @@ TEST_START = "2019-01-01"
 MAX_ITER_GRID = (200, 500, 1000)
 CLASSIFIER_ITER = 400
 THRESHOLDS = np.round(np.arange(0.02, 0.91, 0.01), 2)
+# Importância por permutação: amostra do período de teste e repetições por grupo.
+IMPORTANCE_ROWS = 20_000
+IMPORTANCE_REPEATS = 3
 
 _TREE_PARAMS = {
     "learning_rate": 0.05,
@@ -84,6 +96,52 @@ def _best_threshold(storm: np.ndarray, prob: np.ndarray) -> float:
     """
     hss = [metrics.events(storm, prob >= t)["hss"] for t in THRESHOLDS]
     return float(THRESHOLDS[int(np.nanargmax(hss))])
+
+
+def group_importance(
+    regressor: HistGradientBoostingRegressor,
+    classifier: HistGradientBoostingClassifier,
+    x: pd.DataFrame,
+    y: np.ndarray,
+    storm: np.ndarray,
+    seed: int = 0,
+) -> dict:
+    """Quanto o erro piora quando cada grupo de variáveis é embaralhado (permutação conjunta).
+
+    As colunas de um grupo são embaralhadas com a mesma ordem de linhas, para não quebrar a
+    relação entre elas (ex.: Bz e suas médias). `share` é a fatia de cada grupo no aumento total.
+    """
+    rng = np.random.default_rng(seed)
+    if len(x) > IMPORTANCE_ROWS:
+        pick = np.sort(rng.choice(len(x), IMPORTANCE_ROWS, replace=False))
+        x, y, storm = x.iloc[pick], y[pick], storm[pick]
+    groups: dict[str, list[str]] = {}
+    for col in x.columns:
+        groups.setdefault(feature_group(col), []).append(col)
+
+    scorers = {
+        "regression": ("rmse", lambda xx: metrics.regression(y, regressor.predict(xx))["rmse"]),
+        "storm": ("brier", lambda xx: metrics.brier(storm, classifier.predict_proba(xx)[:, 1])),
+    }
+    out = {"method": "permutation_by_group", "rows": len(x), "repeats": IMPORTANCE_REPEATS}
+    for kind, (metric, score) in scorers.items():
+        baseline = score(x)
+        increase = {}
+        for group, cols in groups.items():
+            values = []
+            for _ in range(IMPORTANCE_REPEATS):
+                shuffled = x.copy()
+                shuffled[cols] = x[cols].to_numpy()[rng.permutation(len(x))]
+                values.append(score(shuffled) - baseline)
+            increase[group] = float(np.mean(values))
+        total = sum(max(v, 0) for v in increase.values()) or 1.0
+        out[kind] = {
+            "metric": metric,
+            "baseline": float(baseline),
+            "increase": increase,
+            "share": {g: round(max(v, 0) / total, 4) for g, v in increase.items()},
+        }
+    return out
 
 
 def train_one(
@@ -142,6 +200,8 @@ def train_one(
             "brier": metrics.brier(storm_test, prob),
             "brier_climatology": metrics.brier(storm_test, np.full(len(prob), climatology)),
         },
+        # Medida no modelo avaliado (sem o período de teste), sobre o próprio teste.
+        "importance": group_importance(regressor, classifier, test[cols], y_test, storm_test),
     }
 
     if refit_all:
@@ -183,6 +243,45 @@ def compare(new: dict, old: dict, rmse_tolerance: float = 1.02, bss_tolerance: f
     return ok, f"RMSE médio {ratio:.3f}x o atual, BSS médio {delta:+.3f}"
 
 
+def _git(*args: str) -> str | None:
+    try:
+        out = subprocess.run(["git", *args], capture_output=True, text=True, timeout=10, check=True)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip()
+
+
+def code_version() -> dict:
+    """Commit do código usado no treino (no Actions vem de GITHUB_SHA)."""
+    commit = os.environ.get("GITHUB_SHA") or _git("rev-parse", "HEAD")
+    status = None if os.environ.get("GITHUB_SHA") else _git("status", "--porcelain", "--untracked-files=no")
+    return {
+        "commit": commit,
+        # Alterações locais ainda não commitadas: o commit sozinho não reproduz o treino.
+        "uncommitted_changes": bool(status) if status is not None else False,
+        "repository": "https://github.com/Strutf/future-space",
+    }
+
+
+def hyperparameters() -> dict:
+    return {
+        "tree": _TREE_PARAMS,
+        "regressor_max_iter_grid": list(MAX_ITER_GRID),
+        "classifier_max_iter": CLASSIFIER_ITER,
+        "threshold_grid": [float(THRESHOLDS[0]), float(THRESHOLDS[-1]), 0.01],
+        "horizons": HORIZONS,
+        "storm_definition": {"kp_min": KP_STORM, "dst_max": DST_STORM},
+        "importance": {"rows": IMPORTANCE_ROWS, "repeats": IMPORTANCE_REPEATS, "seed": 0},
+    }
+
+
+def environment() -> dict:
+    return {
+        "python": platform.python_version(),
+        "libraries": {"scikit-learn": sklearn.__version__, "numpy": np.__version__, "pandas": pd.__version__},
+    }
+
+
 def train_all(
     hourly: pd.DataFrame, cmes: pd.DataFrame | None = None, refit_all: bool = True
 ) -> tuple[list[Trained], dict]:
@@ -203,6 +302,15 @@ def train_all(
         "published_model_trained_on": "todos os dados" if refit_all else "treino + validação",
         "threshold_criterion": "hss",
         "data_end": str(hourly.index.max()),
+        "feature_groups": {
+            g: {"label": label, "features": [c for c in features.columns if feature_group(c) == g]}
+            for g, label in FEATURE_GROUPS.items()
+        },
+        "reproducibility": {
+            "code": code_version(),
+            "hyperparameters": hyperparameters(),
+            "environment": environment(),
+        },
         "models": [t.report for t in trained],
     }
     return trained, summary

@@ -6,7 +6,8 @@ A tabela horária é montada no mesmo formato da usada no treino (OMNI), a parti
 - CMEs do catálogo em tempo real do CACTus
 
 Os modelos ficam no armazenamento em models/<versão>/bundle.joblib, e
-models/current.json aponta a versão em uso.
+models/current.json aponta a versão em uso. models/index.json lista todos os treinos
+(publicados ou recusados pela trava), com métricas e importância de cada grupo de variáveis.
 """
 
 from __future__ import annotations
@@ -22,12 +23,12 @@ import numpy as np
 import pandas as pd
 
 from futurespace.ml.features import BASE_COLUMNS, build_features
+from futurespace.model_index import MODELS_POINTER, index_entry, record
 from futurespace.partitions import labels_between, manifest_key, parquet_key, parse_time
 from futurespace.storage import Storage
 
 log = logging.getLogger(__name__)
 
-MODELS_POINTER = "models/current.json"
 HISTORY = timedelta(days=29)  # recorrência de 27 dias + janelas de 24 h
 CME_HISTORY = timedelta(days=8)  # CMEs lançadas até ~7 dias atrás ainda podem estar a caminho
 CME_MAX_STALENESS = timedelta(days=3)
@@ -41,7 +42,20 @@ def publish_bundle(store: Storage, bundle_path: Path, summary: dict) -> None:
     store.write(f"{base}/bundle.joblib", bundle_path.read_bytes())
     store.write(f"{base}/report.json", json.dumps(summary, indent=2, ensure_ascii=False).encode())
     pointer = {"model_version": version, "bundle": f"{base}/bundle.joblib", "report": f"{base}/report.json"}
+    record(store, index_entry(summary, "published", f"{base}/report.json"), current=version)
     store.write(MODELS_POINTER, json.dumps(pointer).encode())
+
+
+def record_rejected(store: Storage, summary: dict, reason: str) -> str:
+    """Guarda o relatório de um treino que a trava não publicou (sem os modelos, que são grandes).
+
+    Fica numa pasta própria para nunca sobrescrever o relatório de uma versão publicada no mesmo dia.
+    """
+    stamp = (summary.get("trained_at") or "").replace("-", "").replace(":", "")
+    key = f"models/rejected/{summary['model_version']}-{stamp}/report.json"
+    store.write(key, json.dumps(summary, indent=2, ensure_ascii=False).encode())
+    record(store, index_entry(summary, "rejected", key, reason))
+    return key
 
 
 class NoModelPublished(RuntimeError):

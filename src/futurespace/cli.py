@@ -95,13 +95,26 @@ def cmd_train(args: argparse.Namespace) -> int:
 
     from futurespace import storage as storage_mod
     from futurespace.ml.features import hourly_from_history, load_dataset
-    from futurespace.ml.serve import current_report, publish_bundle
+    from futurespace.ml.serve import current_report, publish_bundle, record_rejected
     from futurespace.ml.train import compare, train_all
 
     store = storage_mod.from_env()
-    hourly = hourly_from_history(load_dataset(store, "omni-hourly"), load_dataset(store, "kp-gfz"))
-    cmes = None if args.no_cme else load_dataset(store, "cme-cactus")
-    trained, summary = train_all(hourly, cmes)
+    # Revisão lida antes dos dados: as coletas não gravam ao mesmo tempo (grupo hf-writes).
+    revision = store.data_revision()
+    raw = {"omni-hourly": load_dataset(store, "omni-hourly"), "kp-gfz": load_dataset(store, "kp-gfz")}
+    if not args.no_cme:
+        raw["cme-cactus"] = load_dataset(store, "cme-cactus")
+    hourly = hourly_from_history(raw["omni-hourly"], raw["kp-gfz"])
+    trained, summary = train_all(hourly, raw.get("cme-cactus"))
+    summary["reproducibility"]["data"] = {
+        "storage": os.environ.get("FS_STORAGE", "local"),
+        "repository": os.environ.get("FS_HF_REPO"),
+        "revision": revision,
+        "datasets": {
+            name: {"rows": len(df), "start": str(df["time"].min()), "end": str(df["time"].max())}
+            for name, df in raw.items()
+        },
+    }
 
     bundle = {
         "model_version": summary["model_version"],
@@ -141,8 +154,12 @@ def cmd_train(args: argparse.Namespace) -> int:
             publish, reason = compare(summary, current)
             reason = f"comparado com {current['model_version']}: {reason}"
         log.info("publicação %s: %s", "aprovada" if publish else "recusada", reason)
-        if not publish and os.environ.get("GITHUB_ACTIONS") == "true":
-            print(f"::warning::Modelo novo não publicado ({reason})", flush=True)
+        if not publish:
+            # O treino recusado também entra no histórico, com o motivo.
+            record_rejected(store, summary, reason)
+            store.commit(f"treino {summary['model_version']} não publicado")
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                print(f"::warning::Modelo novo não publicado ({reason})", flush=True)
     if publish:
         publish_bundle(store, out / "bundle.joblib", summary)
         store.commit(f"modelos {summary['model_version']}")

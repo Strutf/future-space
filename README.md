@@ -253,6 +253,8 @@ Documentação interativa (Swagger) em `/docs`.
 | `GET /v1/datasets/predictions/latest` | Previsões mais recentes da IA |
 | `GET /v1/compare/kp?date=AAAA-MM-DD` | IA × NOAA × observado, bloco a bloco (dia e anterior) |
 | `GET /v1/verification/summary` | Erros das previsões nos últimos 7 e 30 dias |
+| `GET /v1/models` | Histórico dos modelos: versões, métricas e peso de cada grupo de variáveis |
+| `GET /v1/models/{id}` | Ficha completa de um treino (código, dados, hiperparâmetros, avaliação) |
 | `GET /`, `/dashboard`, `/sobre`, `/interativo` (e `/en/...`, `/es/...`, `/fr/...`) | Páginas do site em 4 idiomas |
 
 Parâmetros de `/data`:
@@ -308,8 +310,10 @@ json/<dataset>/manifest.json           ← partições existentes e cobertura
 json/<dataset>/latest.json             ← últimos valores
 json/catalog.json                      ← catálogo completo
 models/current.json                    ← versão dos modelos em uso
+models/index.json                      ← histórico de todos os treinos
 models/<versão>/bundle.joblib          ← modelos treinados
-models/<versão>/report.json            ← métricas de avaliação daquela versão
+models/<versão>/report.json            ← ficha completa daquela versão
+models/rejected/<versão>-<hora>/report.json ← treinos recusados pela trava (sem os modelos)
 ```
 
 Partições por **dia** (dados de 1 a 5 min), **mês** (OMNI, flares, regiões, previsões) ou
@@ -498,6 +502,36 @@ futurespace train --no-cme --out models-sem-cme      # mesmo treino sem CMEs, pa
 `models/current.json` aponta para a versão em uso. Para voltar atrás, aponte-o para a
 versão anterior, que continua guardada em `models/<versão>/`.
 
+### Histórico dos modelos (reprodutibilidade)
+
+Cada treino guarda uma ficha (`report.json`) com o necessário para reproduzi-lo e
+compará-lo com os outros, pensando em uso em pesquisa:
+
+| Campo | O que guarda |
+|---|---|
+| `reproducibility.code` | commit do GitHub usado no treino (e se havia alterações não commitadas) |
+| `reproducibility.data` | commit do dataset no Hugging Face lido no treino, mais linhas e cobertura de cada fonte |
+| `reproducibility.hyperparameters` | parâmetros das árvores, grades de busca, horizontes e definição de tempestade |
+| `reproducibility.environment` | versões do Python, scikit-learn, numpy e pandas |
+| `feature_groups` | quais variáveis formam cada grupo |
+| `models[].importance` | peso de cada grupo de variáveis, por modelo |
+
+**Peso de cada grupo de variáveis**: no período de teste, embaralhamos juntas as variáveis
+de um grupo (ex.: todo o vento solar) e medimos quanto o erro piora: RMSE na regressão e
+Brier na chance de tempestade. `share` é a fatia de cada grupo no aumento total. Os grupos
+são vento solar no L1, estado atual da Terra (Kp/Dst), recorrência de 27 dias, CMEs e
+calendário.
+
+Os treinos recusados pela trava também entram no histórico, com o motivo. Como o treino
+é determinístico (`random_state=0`), o mesmo commit de código com a mesma revisão dos
+dados e as mesmas versões das bibliotecas produz o mesmo modelo. A versão `v3-20261106`
+é anterior à ficha e aparece com os campos de reprodutibilidade vazios.
+
+```bash
+curl https://future-space-six.vercel.app/v1/models                # todas as versões
+curl https://future-space-six.vercel.app/v1/models/v3-20261106    # ficha completa
+```
+
 ### Site
 
 O site fica em https://future-space-six.vercel.app, com visual de quadro-negro e desenhos em
@@ -642,6 +676,7 @@ src/futurespace/
 ├── partitions.py           # layout dos arquivos e utilidades de tempo
 ├── storage.py              # backends: local, Hugging Face, S3, HTTP
 ├── cli.py                  # comando `futurespace`
+├── model_index.py          # histórico dos modelos (models/index.json), lido pela API
 ├── pipeline/
 │   ├── http.py             # cliente HTTP com novas tentativas
 │   ├── writer.py           # mescla, deduplica e grava Parquet + JSON

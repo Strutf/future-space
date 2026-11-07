@@ -24,7 +24,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from futurespace import __version__, catalog
+from futurespace import __version__, catalog, model_index
 from futurespace.api import compare
 from futurespace.partitions import (
     CATALOG_KEY,
@@ -47,6 +47,8 @@ padronizados num formato comum: toda tabela tem uma coluna `time` em UTC.
 - `GET /v1/datasets/{id}/latest`: valores mais recentes
 - `GET /v1/datasets/predictions/latest`: previsões de Dst e Kp dos modelos do projeto
 - `GET /v1/verification/summary`: quanto as previsões erraram nos últimos 7 e 30 dias
+- `GET /v1/models`: histórico dos modelos treinados, com métricas e o peso de cada grupo de variáveis
+- `GET /v1/models/{id}`: ficha completa de um treino (código, dados, hiperparâmetros, avaliação)
 
 Cite sempre a fonte original indicada em `provider` e `license`.
 """
@@ -435,6 +437,42 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
             raise HTTPException(404, "ainda não há previsões verificadas")
         response.headers.update(_cache_header(300))
         return summary
+
+    @app.get("/v1/models", summary="Histórico dos modelos: versões, métricas e importância das variáveis")
+    def list_models(response: Response):
+        try:
+            index = model_index.read_index(store)
+        except httpx.HTTPError:
+            raise HTTPException(503, "armazenamento de dados indisponível; tente novamente em instantes") from None
+        if not index["versions"]:
+            raise HTTPException(404, "nenhum modelo treinado ainda")
+        response.headers.update(_cache_header(3600))
+        return {
+            **index,
+            "groups": model_index.FEATURE_GROUPS,
+            "notes": {
+                "metrics": "período de teste (2019 em diante), com o modelo treinado sem esse período",
+                "importance": "fatia de cada grupo no aumento do erro (RMSE na regressão, Brier na "
+                "chance de tempestade) quando as variáveis do grupo são embaralhadas",
+            },
+            "links": {v["id"]: f"/v1/models/{v['id']}" for v in index["versions"]},
+        }
+
+    @app.get("/v1/models/{model_id}", summary="Ficha completa de um treino")
+    def get_model(model_id: str, response: Response):
+        try:
+            index = model_index.read_index(store)
+        except httpx.HTTPError:
+            raise HTTPException(503, "armazenamento de dados indisponível; tente novamente em instantes") from None
+        # Só abre relatórios listados no índice: o id nunca vira caminho diretamente.
+        entry = next((v for v in index["versions"] if v["id"] == model_id), None)
+        if entry is None:
+            raise HTTPException(404, f"modelo '{model_id}' não existe; veja /v1/models")
+        report = read_json(entry["report"])
+        if report is None:
+            raise HTTPException(404, f"relatório de '{model_id}' não encontrado")
+        response.headers.update(_cache_header(3600))
+        return {"status": entry["status"], "reason": entry["reason"], **report}
 
     @app.get("/v1/datasets/{dataset_id}/data", summary="Série temporal num intervalo")
     def get_data(

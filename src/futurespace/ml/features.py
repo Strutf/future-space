@@ -13,6 +13,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from futurespace.model_index import FEATURE_GROUPS  # noqa: F401 (reexportado para o treino)
 from futurespace.partitions import manifest_key, parquet_key
 from futurespace.pipeline.connectors.cactus import prefer_curated
 from futurespace.storage import Storage
@@ -34,6 +35,24 @@ BASE_COLUMNS = [*SOLAR_WIND, "dst", "kp"]
 # Kp >= 5- (4.67) corresponde a tempestade G1 na escala da NOAA.
 KP_STORM = 4.67
 DST_STORM = -50.0
+
+
+_SOLAR_WIND_PREFIXES = {"b", "by", "bz", "speed", "density", "temperature", "pressure", "newell", "vbs", "clock"}
+
+
+def feature_group(name: str) -> str:
+    """Grupo da variável (chaves de FEATURE_GROUPS), usado na importância por permutação."""
+    if name.startswith("rec27"):
+        return "recurrence"
+    if name.startswith("cme_"):
+        return "cmes"
+    if name.startswith(("dst", "kp_known")):
+        return "earth_state"
+    if name.startswith(("doy", "ut_")):
+        return "calendar"
+    if name.split("_")[0] in _SOLAR_WIND_PREFIXES:
+        return "solar_wind"
+    raise ValueError(f"variável sem grupo: {name}")
 
 
 def load_dataset(storage: Storage, dataset_id: str) -> pd.DataFrame:

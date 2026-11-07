@@ -27,6 +27,10 @@ class Storage(ABC):
     def commit(self, message: str) -> None:
         """Confirma as escritas pendentes. Backends sem transação não fazem nada."""
 
+    def data_revision(self) -> str | None:
+        """Identificador da versão atual dos dados, quando o backend tem histórico."""
+        return None
+
 
 class LocalStorage(Storage):
     def __init__(self, root: str | Path):
@@ -71,6 +75,10 @@ class HuggingFaceStorage(Storage):
         headers = {"Authorization": f"Bearer {token}"} if token else None
         self._http = HttpStorage(hf_resolve_url(repo_id, revision), headers=headers)
         self._pending: dict[str, bytes] = {}
+
+    def data_revision(self) -> str | None:
+        """Commit do dataset no Hugging Face: com ele dá para baixar os dados exatamente como estavam."""
+        return self.api.repo_info(self.repo_id, repo_type="dataset", revision=self.revision).sha
 
     def read(self, key: str) -> bytes | None:
         if key in self._pending:
