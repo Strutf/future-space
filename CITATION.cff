@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use these data, models or results, please cite them as below, and also cite the original data sources listed in the README."
+title: "Future Space: open multi-source space-weather data and machine-learning forecasts of geomagnetic storms"
+type: software
+authors:
+  - family-names: "Flórido"
+    given-names: "Victor"
+repository-code: "https://github.com/Strutf/future-space"
+url: "https://future-space-six.vercel.app"
+license: MIT
+version: "0.1.0"
+date-released: "2026-11-07"
+keywords:
+  - space weather
+  - geomagnetic storms
+  - Kp index
+  - Dst index
+  - solar wind
+  - machine learning
+  - gradient boosting
+  - open data
