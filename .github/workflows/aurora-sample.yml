@@ -1,0 +1,67 @@
+name: aurora-sample
+
+# Pesquisa da probabilidade da aurora: sorteia momentos escuros e de céu limpo das câmeras
+# THEMIS e guarda uma imagem de cada no Hugging Face (research/aurora/themis/).
+# Dispara sozinho quando o plano muda, ou pelo botão Run workflow.
+on:
+  push:
+    branches: [main]
+    paths: [research/aurora/themis_plan.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.read.outputs.tasks }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: read
+        run: echo "tasks=$(jq -c . research/aurora/themis_plan.json)" >> "$GITHUB_OUTPUT"
+
+  sample:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        task: ${{ fromJSON(needs.plan.outputs.tasks) }}
+    env:
+      FS_HF_REPO: ${{ vars.FS_HF_REPO }}
+      SITE: ${{ matrix.task.site }}
+      START: ${{ matrix.task.start }}
+      END: ${{ matrix.task.end }}
+      N: ${{ matrix.task.n }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -c requirements-pipeline.txt ".[pipeline,hf]"
+      - name: Sortear e baixar imagens
+        run: python research/aurora/sample_themis.py "$SITE" "$START" "$END" "$N" out
+      - name: Enviar ao Hugging Face
+        if: ${{ hashFiles('out/frames.npz') != '' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          folder = f"research/aurora/themis/{os.environ['SITE']}_{os.environ['START']}_{os.environ['END']}"
+          HfApi(token=os.environ["HF_TOKEN"]).upload_folder(
+              repo_id=os.environ["FS_HF_REPO"], repo_type="dataset", folder_path="out",
+              path_in_repo=folder, commit_message=f"aurora: imagens THEMIS {folder}",
+          )
+          print("enviado para", folder)
+          PY
