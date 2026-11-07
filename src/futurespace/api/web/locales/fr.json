@@ -305,7 +305,8 @@
     "travel_cta": "Voyager",
     "aurora_title": "Où voir des aurores ?",
     "aurora_text": "Monte le Kp et regarde l'anneau des aurores descendre sur la carte. Atteindra-t-il ta ville ?",
-    "aurora_cta": "Explorer"
+    "aurora_cta": "Explorer",
+    "back": "← Retour au terrain de jeu"
   },
   "sim": {
     "title": "Lance ta tempête",

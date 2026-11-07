@@ -240,3 +240,13 @@ def test_interactive_subpages_highlight_the_interactive_menu_and_load_versioned_
     assert f"/static/world-land.json?v={STATIC_VERSIONS['world-land.json']}" in client.get("/fr/interactif/aurore").text
     data = client.get(f"/static/sim-model.json?v={STATIC_VERSIONS['sim-model.json']}")
     assert data.headers["content-type"].startswith("application/json")
+
+
+@pytest.mark.parametrize("path, hub, text", [
+    ("/interativo/tempestade", "/interativo", "Voltar ao parquinho"),
+    ("/en/interactive/time-travel", "/en/interactive", "Back to the playground"),
+    ("/es/interactivo/aurora", "/es/interactivo", "Volver al parque"),
+    ("/fr/interactif/tempete", "/fr/interactif", "Retour au terrain de jeu"),
+])
+def test_interactive_pages_have_back_link_to_the_hub(client, path, hub, text):
+    assert f'<a class="back-link" href="{hub}">← {text}</a>' in client.get(path).text

@@ -305,7 +305,8 @@
     "travel_cta": "Viajar",
     "aurora_title": "¿Dónde se ven auroras?",
     "aurora_text": "Sube el Kp y mira cómo el anillo de la aurora baja por el mapa. ¿Llegará a tu ciudad?",
-    "aurora_cta": "Explorar"
+    "aurora_cta": "Explorar",
+    "back": "← Volver al parque"
   },
   "sim": {
     "title": "Lanza tu tormenta",

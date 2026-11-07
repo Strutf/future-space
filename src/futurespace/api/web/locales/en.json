@@ -305,7 +305,8 @@
     "travel_cta": "Travel",
     "aurora_title": "Where can you see auroras?",
     "aurora_text": "Turn up Kp and watch the aurora ring slide down the map. Will it reach your city?",
-    "aurora_cta": "Explore"
+    "aurora_cta": "Explore",
+    "back": "← Back to the playground"
   },
   "sim": {
     "title": "Launch your storm",

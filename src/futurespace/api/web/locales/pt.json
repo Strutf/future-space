@@ -305,7 +305,8 @@
     "travel_cta": "Viajar",
     "aurora_title": "Onde dá para ver aurora?",
     "aurora_text": "Suba o Kp e veja o anel da aurora descer pelo mapa. Será que chega na sua cidade?",
-    "aurora_cta": "Explorar"
+    "aurora_cta": "Explorar",
+    "back": "← Voltar ao parquinho"
   },
   "sim": {
     "title": "Lance sua tempestade",

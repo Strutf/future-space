@@ -136,6 +136,14 @@ h1, h2, h3 { font-family: var(--marker); font-weight: 400; letter-spacing: 0.5px
 .chalk-btn:hover { transform: rotate(1deg) scale(1.03); }
 .chalk-btn.ghost { background: transparent; color: var(--chalk); border: 2px solid var(--chalk); }
 
+/* Botão de voltar das páginas internas */
+.back-link {
+  display: inline-block; margin-top: 18px; padding: 3px 14px; font-size: 18px; color: var(--chalk-soft);
+  text-decoration: none; border: 2px solid var(--chalk-line);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+.back-link:hover, .back-link:focus-visible { color: var(--chalk-yellow); border-color: var(--chalk-yellow); }
+
 /* Rabiscos (ícones de giz) */
 .doodle { width: 56px; height: 56px; flex: none; }
 .doodle * { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
