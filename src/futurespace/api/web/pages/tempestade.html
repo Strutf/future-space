@@ -75,10 +75,15 @@
   <div>
     <div class="box stage">
       <svg id="stage" viewBox="0 0 900 260" role="img" aria-label="{{t:sim.stage_aria}}">
+        <!-- Desenhada antes de tudo: quando passa longe, a bolha some por trás da Terra. -->
+        <g id="bubble" opacity="0">
+          <path d="M-22 -18 q30 -14 44 18 q-14 32 -44 18 q12 -18 0 -36z" fill="rgba(255,179,122,0.18)" stroke="var(--chalk-orange)" stroke-width="3"/>
+          <path id="bubble-field" d="M-6 -8 v16 l-5 -5 m5 5 l5 -5" fill="none" stroke="var(--chalk)" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
         <g filter="url(#wobble)">
           <circle cx="80" cy="130" r="52" fill="none" stroke="var(--chalk-yellow)" stroke-width="4"/>
           <path d="M80 62v-20M80 218v-20M12 130h-20M168 130h-20M32 82l-12-12M128 178l12 12M32 178l-12 12M128 82l12-12" stroke="var(--chalk-yellow)" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="826" cy="130" r="26" fill="none" stroke="var(--chalk-blue)" stroke-width="4"/>
+          <circle cx="826" cy="130" r="26" fill="var(--board)" stroke="var(--chalk-blue)" stroke-width="4"/>
           <path d="M814 122 q6 -6 12 0 t10 6 M812 138 q8 3 14 8" fill="none" stroke="var(--chalk-green)" stroke-width="3"/>
           <rect x="752" y="122" width="14" height="14" fill="none" stroke="var(--chalk)" stroke-width="2.5"/>
           <path d="M752 129h-12M766 129h12" stroke="var(--chalk)" stroke-width="2.5"/>
@@ -90,10 +95,6 @@
         <g id="aurora" opacity="0">
           <path d="M800 108 q26 -24 52 0" fill="none" stroke="var(--chalk-green)" stroke-width="5" stroke-linecap="round"/>
           <path d="M800 152 q26 24 52 0" fill="none" stroke="var(--chalk-pink)" stroke-width="5" stroke-linecap="round"/>
-        </g>
-        <g id="bubble" opacity="0">
-          <path d="M-22 -18 q30 -14 44 18 q-14 32 -44 18 q12 -18 0 -36z" fill="rgba(255,179,122,0.18)" stroke="var(--chalk-orange)" stroke-width="3"/>
-          <path id="bubble-field" d="M-6 -8 v16 l-5 -5 m5 5 l5 -5" fill="none" stroke="var(--chalk)" stroke-width="2.5" stroke-linecap="round"/>
         </g>
         <text id="clock" class="big" x="450" y="40" text-anchor="middle"></text>
         <text id="l1-msg" class="warn" x="660" y="84" text-anchor="middle"></text>
@@ -215,7 +216,9 @@ function launch() {
   const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0
     : Math.min(6000, Math.max(1400, (travelHours / 24) * 1800));
   const miss = inp.aim === "miss";
-  const [x0, x1] = [140, 800];
+  // Passando longe, a bolha não sobe nem desce (isso pareceria "norte" ou "sul"): ela segue reto
+  // e vai diminuindo e apagando, como algo que se afasta de quem olha, passando por trás da Terra.
+  const [x0, x1] = [140, miss ? 895 : 800];
   $("launch").disabled = true;
   $("l1-msg").textContent = ""; $("earth-msg").textContent = "";
   aurora.setAttribute("opacity", 0);
@@ -225,9 +228,10 @@ function launch() {
     if (start === null) start = ts;
     const p = ms ? Math.min(1, (ts - start) / ms) : 1;
     const x = x0 + (x1 - x0) * p;
-    const y = miss ? 130 - 95 * p * p : 130;
-    const scale = 0.7 + 0.8 * p; // a bolha cresce enquanto viaja
-    bubble.setAttribute("transform", `translate(${x},${y}) scale(${scale})`);
+    const away = miss ? Math.max(0, (p - 0.45) / 0.55) : 0; // 0 → 1 na segunda metade do caminho
+    const scale = (0.7 + 0.8 * p) * (1 - 0.65 * away); // cresce enquanto viaja; se erra, se afasta
+    bubble.setAttribute("transform", `translate(${x},130) scale(${scale})`);
+    bubble.setAttribute("opacity", 1 - 0.7 * away);
     $("clock").textContent = "⏱ " + duration(travelHours * p);
     if (!warned && x >= 752 && !miss) {
       warned = true;
