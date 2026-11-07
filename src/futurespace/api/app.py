@@ -371,9 +371,19 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         manifest = read_json(manifest_key(ds.id)) or {}
         return {**ds.to_dict(), "coverage": {k: manifest.get(k) for k in ("start", "end", "updated_at")}}
 
+    def parquet_only(ds: catalog.Dataset):
+        hint = f" Os valores mais recentes estão em /v1/datasets/{ds.id}/latest." if ds.latest_json else ""
+        raise HTTPException(
+            404,
+            f"'{ds.id}' é grande demais para a API e fica só em Parquet: "
+            f"https://huggingface.co/datasets/Strutf/future-space/tree/main/parquet/{ds.id}.{hint}",
+        )
+
     @app.get("/v1/datasets/{dataset_id}/latest", summary="Valores mais recentes")
     def get_latest(dataset_id: str, response: Response):
         ds = dataset_or_404(dataset_id)
+        if not ds.latest_json:
+            parquet_only(ds)
         latest = read_json(latest_key(ds.id))
         if latest is None:
             raise HTTPException(404, f"ainda não há dados para '{ds.id}'")
@@ -483,6 +493,8 @@ def create_app(storage: Storage | None = None, rate_limit_per_minute: int | None
         format: Literal["json", "csv"] = "json",
     ):
         ds = dataset_or_404(dataset_id)
+        if not ds.json_partitions:
+            parquet_only(ds)
         manifest = read_json(manifest_key(ds.id))
         if not manifest:
             raise HTTPException(404, f"ainda não há dados para '{ds.id}'")

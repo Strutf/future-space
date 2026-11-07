@@ -13,7 +13,7 @@ from datetime import datetime
 import httpx
 import pandas as pd
 
-from futurespace.pipeline.connectors import cactus, gfz, noaa_3day, omni, swpc
+from futurespace.pipeline.connectors import aurora, cactus, gfz, noaa_3day, omni, swpc
 
 Connector = Callable[[httpx.Client, datetime, datetime], pd.DataFrame]
 
@@ -31,4 +31,6 @@ CONNECTORS: dict[str, Connector] = {
     "dst": swpc.dst,
     "kp-gfz": gfz.kp_gfz,
     "omni-hourly": omni.omni_hourly,
+    "aurora-ovation": aurora.aurora_ovation,
+    "aurora-weather": aurora.aurora_weather,
 }

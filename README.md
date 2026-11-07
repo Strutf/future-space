@@ -30,13 +30,16 @@ A solar storm develops in stages, and each stage is observed by different instru
 
 The project has three components:
 
-1. **Data collection.** Thirteen datasets are collected every hour, standardized (UTC `time`
+1. **Data collection.** Fifteen datasets are collected every hour, standardized (UTC `time`
    column, consistent units and missing values) and archived. Several sources keep only 1–7
    days of real-time data, so continuous collection is what makes the archive possible.
 2. **Forecasting.** Gradient-boosted tree models forecast the Kp index (3–24 h ahead) and the
    Dst index (1–24 h ahead), each with a value, a storm probability and an alert. Forecasts are
    issued every hour and verified against observations every day.
 3. **Distribution.** A public API, Parquet/JSON files and a website.
+
+An experimental aurora-visibility forecast runs in the backend (see "Aurora visibility"). It
+is not yet shown on the website.
 
 The Dst index complements Kp because it better represents low latitudes.
 
@@ -49,6 +52,7 @@ No server or database runs continuously. All outputs are precomputed and stored 
    ├─ futurespace update     connectors download and standardize each source;
    │                         the writer merges, deduplicates and writes Parquet + JSON
    ├─ futurespace predict    applies the published models to the latest data
+   ├─ futurespace aurora     aurora-visibility forecast per city
    └─ futurespace verify     (daily) compares past forecasts with observations
                     │
                     ▼
@@ -85,8 +89,11 @@ All sources are public and free of charge, and none requires registration.
 | `goes-protons` | orbit | NOAA SWPC / GOES | 5 min | since collection | archived |
 | `goes-flares` | Sun | NOAA SWPC / GOES | event | since collection | archived |
 | `solar-regions` | Sun | NOAA SWPC | 1 day | since collection | archived |
+| `aurora-ovation` | all | NOAA SWPC OVATION Prime | 1 h | since collection | aurora probability map (Parquet only) |
+| `aurora-weather` | ground | Open-Meteo | 1 h | since collection | cloud cover at the aurora sites |
 | `predictions` | — | this project | 1 h | since model release | live forecasts |
 | `verification` | — | this project | 1 h | since model release | forecast vs. observed |
+| `aurora-visibility` | — | this project | 1 h | since collection | aurora-visibility forecast (Parquet only) |
 
 <details>
 <summary>Source details (endpoints, conventions, caveats)</summary>
@@ -117,6 +124,15 @@ All sources are public and free of charge, and none requires registration.
   editions (00:30 and 12:30 UTC) since March 2022. Only blocks that had not started at issue
   time are kept. September and October 2022 are missing from the archive.
 - **Kyoto Dst** (`kyoto-dst.json`): provisional real-time values.
+- **OVATION Prime** (`ovation_aurora_latest.json`): probability of visible aurora on a global
+  1° grid, computed by NOAA from the L1 solar wind and valid for roughly 30–90 minutes ahead.
+  Only non-zero cells are stored (~20,000 per map). NOAA keeps no public archive of this
+  product, so the history starts with this collection. Longitudes follow the source
+  convention (0–359).
+- **Open-Meteo** (`api.open-meteo.com/v1/forecast`): hourly total, low, mid and high cloud
+  cover and horizontal visibility for the next 25 hours at each aurora site, in a single
+  request. Each hour keeps the most recent forecast; `issued` records when it was obtained.
+  CC BY 4.0, free for non-commercial use.
 - **GOES and solar regions:**
   - X-ray flux in two bands;
   - integral proton flux (≥1 to ≥500 MeV);
@@ -317,6 +333,56 @@ at `GET /v1/verification/summary`.
 - **Interpretation of importance.** Permutation importance describes what the model uses, not
   physical causation. Correlated groups share credit.
 
+## Aurora visibility (experimental)
+
+This component runs in the backend to accumulate data and forecasts. It is not yet shown on
+the website.
+
+Every hour, `futurespace aurora` estimates, for 37 sites and for each of the next 24 hours,
+the chance of seeing the aurora. The sites are listed in `src/futurespace/aurora/sites.py`
+and include:
+
+- cities in and near the auroral zones;
+- mid-latitude cities;
+- Southern Hemisphere and Brazilian references;
+- locations of NASA THEMIS all-sky cameras.
+
+The forecast is computed as:
+
+```
+visibility_chance = aurora_chance × (1 − cloud_cover/100) × darkness × moon_factor
+```
+
+| Component | Method (v0) |
+|---|---|
+| expected Kp | the project's Kp forecast for the 3-hour block, interpolated between the +3/+6/+12/+24 h blocks; before the first forecast block, the last measured Kp |
+| `aurora_chance` | logistic function of (expected Kp − Kp needed), with a scale of 0.5 Kp; the Kp needed comes from the visibility line used by the website's aurora map, 66° − 1.5° × Kp of dipole magnetic latitude |
+| `darkness` | 0 with the Sun above −6°, 1 below −15°, linear in between |
+| `moon_factor` | 1 − 0.3 × illuminated fraction when the Moon is above the horizon |
+| cloud cover | Open-Meteo forecast |
+
+**OVATION reference.** For the next hour, the maximum OVATION probability within 500 km is
+stored separately, together with the corresponding visibility (`visibility_chance_ovation`).
+At an altitude of about 110 km, the aurora appears on the horizon from that distance.
+
+The two estimates are kept apart because they are on different scales: OVATION rarely
+exceeds about 50%, and it depends on magnetic local time, which the Kp rule ignores. The
+OVATION archive collected here is intended to calibrate the next version of the formula.
+
+**Astronomy.** Sun and Moon positions use the Astronomical Almanac low-precision formulas,
+implemented in `aurora/astro.py`. Against astropy, over 300 random times and places between
+1990 and 2035, the maximum errors are:
+
+- 0.008° for the Sun's altitude;
+- 0.3° for the Moon's altitude;
+- 0.002 for the Moon's illuminated fraction.
+
+**Limitations.** The v0 weights are not calibrated against observations. The Kp rule has no
+magnetic-local-time dependence and no poleward boundary for the auroral oval.
+
+**Planned verification:** classify all-sky camera images (THEMIS, with labelled data such as
+OATH) and score both estimates against the observed aurora.
+
 ## Model history and reproducibility
 
 Each training run writes a record (`report.json`) next to its models. `models/index.json`
@@ -397,10 +463,14 @@ Base URL: `https://future-space-six.vercel.app`. Interactive documentation is at
 | `GET /v1/verification/summary` | forecast errors over the last 7 and 30 days |
 | `GET /v1/models` | model history, metrics and feature-group importance |
 | `GET /v1/models/{id}` | record of a training run |
+| `GET /v1/datasets/aurora-visibility/latest` | latest aurora-visibility forecast (all sites, 0–24 h) |
 
 ```bash
 curl "https://future-space-six.vercel.app/v1/datasets/omni-hourly/data?start=2024-05-10&end=2024-05-12&fields=bz_gsm,speed,kp,dst"
 ```
+
+Large datasets (`aurora-ovation`, `aurora-visibility`) are available only as Parquet files.
+For them, `/data` returns `404` with a link to the files.
 
 Usage limits:
 
@@ -428,6 +498,7 @@ futurespace backfill cme-cactus --start 1997-01-01   # CMEs since 1997 (~40 s)
 futurespace train                                    # train and evaluate (~10 min) into ./models
 futurespace train --no-cme --out models-no-cme       # same training without CME features
 futurespace predict                                  # forecast from current data
+futurespace aurora                                   # aurora-visibility forecast per city
 futurespace serve --reload                           # API at http://localhost:8000/docs
 pytest -q                                            # tests
 ```
@@ -536,6 +607,10 @@ src/futurespace/
 ├── storage.py          storage backends: local, Hugging Face, S3, HTTP
 ├── model_index.py      model history (models/index.json), readable without ML libraries
 ├── cli.py              `futurespace` command
+├── aurora/
+│   ├── sites.py        sites followed by the aurora forecast
+│   ├── astro.py        Sun and Moon altitude, Moon illumination
+│   └── visibility.py   aurora-visibility forecast (v0)
 ├── pipeline/           HTTP client, writer (merge and deduplication), one connector per source
 ├── ml/
 │   ├── features.py     hourly table, features, targets and feature groups
@@ -563,13 +638,15 @@ The writer and the API then serve it without further changes.
 
 ## Roadmap
 
-- [x] Collection and archiving of 13 datasets; public API; Parquet/JSON dataset
+- [x] Collection and archiving of 15 datasets; public API; Parquet/JSON dataset
 - [x] Kp and Dst forecasts 1–24 h ahead (value, probability, alert)
 - [x] CME features from CACTus
 - [x] Hourly live forecasts, daily verification, comparison with NOAA
 - [x] Monthly retraining with a publication gate
 - [x] Reproducible training records and feature-group importance
 - [x] Website in four languages with interactive pages
+- [x] Aurora-visibility forecast per city in the backend (v0), with the OVATION archive
+- [ ] Aurora: calibration with OVATION and all-sky cameras; publication on the website
 - [ ] CME direction and arrival time (NASA DONKI, WSA–Enlil)
 - [ ] Additional sources: INTERMAGNET magnetometers (Vassouras and Tatuoca, Brazil),
       INPE/EMBRACE, ionospheric TEC
@@ -593,6 +670,9 @@ Original data sources:
 - **CACTus:** Robbrecht, E., & Berghmans, D. (2004). *A&A*, 425, 1097–1106.
   doi:10.1051/0004-6361:20041302. SIDC, Royal Observatory of Belgium.
 - **NOAA SWPC** real-time products and the NCEI forecast archive: public domain.
+- **OVATION Prime:** Newell, P. T., Sotirelis, T., & Wing, S. (2009). *JGR*, 114, A09207.
+  doi:10.1029/2009JA014326.
+- **Open-Meteo:** weather data by Open-Meteo.com (CC BY 4.0).
 
 Methods referenced:
 

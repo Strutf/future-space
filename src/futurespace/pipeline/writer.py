@@ -109,7 +109,8 @@ def write_dataset(
     for lbl, part in df.groupby(labels, sort=True):
         full = _merge(read_parquet(storage, parquet_key(ds.id, lbl)), part, ds)
         storage.write(parquet_key(ds.id, lbl), to_parquet_bytes(full))
-        storage.write(json_key(ds.id, lbl), _json_bytes(to_records(full, ds)))
+        if ds.json_partitions:
+            storage.write(json_key(ds.id, lbl), _json_bytes(to_records(full, ds)))
         merged[lbl] = full
 
     raw = storage.read(manifest_key(ds.id))
@@ -127,7 +128,7 @@ def write_dataset(
     storage.write(manifest_key(ds.id), _json_bytes(manifest))
 
     newest = partitions[-1]
-    if newest in merged:
+    if ds.latest_json and newest in merged:
         latest = {"dataset": ds.id, "updated_at": format_time(now)}
         latest["data"] = to_records(_latest(merged[newest], ds), ds)
         storage.write(latest_key(ds.id), _json_bytes(latest))

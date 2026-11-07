@@ -50,6 +50,10 @@ class Dataset:
     latest_group: tuple[str, ...] = ()
     # True quando a fonte oferece histórico longo e `futurespace backfill` faz sentido.
     historical: bool = False
+    # False para datasets grandes demais para a API: só Parquet.
+    json_partitions: bool = True
+    # False quando nem o latest.json cabe: regravá-lo a cada hora incharia o histórico do repositório.
+    latest_json: bool = True
     notes: str = ""
 
     @property
@@ -476,6 +480,108 @@ DATASETS: tuple[Dataset, ...] = (
         max_query_days=366,
         default_days=30,
         notes="O OMNI é publicado com atraso de algumas semanas em relação ao tempo real.",
+    ),
+    Dataset(
+        id="aurora-ovation",
+        title="Mapa de probabilidade de aurora (NOAA OVATION, 1°)",
+        description="Probabilidade de aurora visível em cada ponto de uma grade global de 1°, "
+        "calculada pelo modelo OVATION Prime da NOAA a partir do vento solar no L1. Válida para "
+        "cerca de 30 a 90 minutos à frente. Só os pontos com probabilidade acima de zero.",
+        stage="multi",
+        provider=SWPC,
+        source_url="https://services.swpc.noaa.gov/json/ovation_aurora_latest.json",
+        license=SWPC_LICENSE,
+        cadence="1h (coleta); a fonte atualiza a cada ~5 min",
+        partition="day",
+        key=("time", "lon", "lat"),
+        fields=(
+            _time("Instante das observações de vento solar usadas (UTC)"),
+            Field("forecast_time", "time", None, "Instante para o qual o mapa vale (UTC)"),
+            Field("lon", "int", "deg", "Longitude geográfica, 0 a 359 (convenção da fonte)"),
+            Field("lat", "int", "deg", "Latitude geográfica, -90 a 90"),
+            Field("aurora", "int", "%", "Probabilidade de aurora visível"),
+        ),
+        schedule="realtime",
+        update_days=1,
+        max_query_days=1,
+        latest_mode="snapshot",
+        json_partitions=False,
+        latest_json=False,
+        notes="A NOAA não mantém arquivo público deste produto; o histórico existe a partir do "
+        "início da coleta. Por ser grande (~20 mil pontos por mapa), fica só em Parquet.",
+    ),
+    Dataset(
+        id="aurora-weather",
+        title="Nuvens e visibilidade nas cidades da previsão de aurora (Open-Meteo)",
+        description="Cobertura de nuvens (total, baixa, média e alta) e visibilidade horizontal "
+        "previstas hora a hora para as cidades acompanhadas. Cada hora guarda a previsão mais "
+        "recente; `issued` diz quando ela foi obtida.",
+        stage="ground",
+        provider="Open-Meteo (modelos meteorológicos nacionais, best match)",
+        source_url="https://open-meteo.com/en/docs",
+        license="CC BY 4.0. Cite: Weather data by Open-Meteo.com. Uso gratuito não comercial.",
+        cadence="1h",
+        partition="day",
+        key=("time", "site"),
+        fields=(
+            _time("Hora prevista (UTC)"),
+            Field("site", "str", None, "Cidade (id em futurespace/aurora/sites.py)"),
+            Field("issued", "time", None, "Hora da coleta da previsão (UTC)"),
+            Field("cloud_cover", "float", "%", "Cobertura total de nuvens"),
+            Field("cloud_cover_low", "float", "%", "Nuvens baixas"),
+            Field("cloud_cover_mid", "float", "%", "Nuvens médias"),
+            Field("cloud_cover_high", "float", "%", "Nuvens altas"),
+            Field("visibility", "float", "m", "Visibilidade horizontal"),
+        ),
+        schedule="realtime",
+        update_days=2,
+        max_query_days=7,
+        default_days=2,
+        latest_group=("site",),
+    ),
+    Dataset(
+        id="aurora-visibility",
+        title="Previsão de visibilidade da aurora por cidade (experimental)",
+        description="Chance de ver a aurora em cada cidade nas próximas 24 h, emitida de hora em "
+        "hora. Combina a chance de aurora pelo Kp previsto pelos modelos do projeto com nuvens, "
+        "escuridão e Lua; nas horas 0 e 1 guarda também a versão pelo mapa OVATION. Cada "
+        "componente fica numa coluna, para a fórmula poder ser recalibrada.",
+        stage="ground",
+        provider="Future Space",
+        source_url="https://github.com/Strutf/future-space",
+        license="MIT. Previsões experimentais.",
+        cadence="1h",
+        partition="day",
+        key=("time", "site", "target_time"),
+        fields=(
+            _time("Momento da emissão (UTC)"),
+            Field("site", "str", None, "Cidade (id em futurespace/aurora/sites.py)"),
+            Field("target_time", "time", None, "Hora prevista (UTC)"),
+            Field("lead_hours", "int", "h", "Antecedência"),
+            Field("latitude", "float", "deg", "Latitude geográfica da cidade"),
+            Field("longitude", "float", "deg", "Longitude geográfica da cidade"),
+            Field("mag_lat", "float", "deg", "Latitude magnética (dipolo)"),
+            Field("kp_expected", "float", None, "Kp esperado na hora prevista"),
+            Field("kp_source", "str", None, "observed (último Kp medido) ou model (previsão do projeto)"),
+            Field("kp_needed", "float", None, "Menor Kp que leva a aurora ao horizonte da cidade"),
+            Field("ovation_nearby", "float", "%", "Maior probabilidade OVATION num raio de 500 km"),
+            Field("aurora_chance_ovation", "float", None, "Chance de aurora pelo OVATION (só próxima hora)"),
+            Field("aurora_chance_kp", "float", None, "Chance de aurora pelo Kp esperado"),
+            Field("aurora_chance", "float", None, "Chance de aurora usada (pelo Kp, em todas as horas)"),
+            Field("cloud_cover", "float", "%", "Cobertura total de nuvens prevista"),
+            Field("sun_altitude", "float", "deg", "Altura do Sol"),
+            Field("moon_altitude", "float", "deg", "Altura da Lua"),
+            Field("moon_illumination", "float", None, "Fração iluminada da Lua"),
+            Field("darkness", "float", None, "0 (Sol acima de -6°) a 1 (abaixo de -15°)"),
+            Field("visibility_chance", "float", None, "Chance de ver a aurora"),
+            Field("visibility_chance_ovation", "float", None, "Chance de ver a aurora pelo OVATION (só próxima hora)"),
+            Field("method", "str", None, "Versão da fórmula"),
+        ),
+        schedule="derived",
+        max_query_days=1,
+        latest_mode="snapshot",
+        json_partitions=False,
+        notes="Fórmula inicial (v0), ainda não calibrada com observações. Ver o README.",
     ),
 )
 

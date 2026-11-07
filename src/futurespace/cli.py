@@ -207,6 +207,29 @@ def cmd_predict(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_aurora(args: argparse.Namespace) -> int:
+    import pandas as pd
+
+    from futurespace import storage as storage_mod
+    from futurespace.aurora.visibility import forecast
+    from futurespace.pipeline.writer import write_catalog, write_dataset
+
+    store = storage_mod.from_env()
+    rows = forecast(store)
+    now = datetime.now(UTC)
+    write_dataset(store, catalog.get("aurora-visibility"), rows, now=now)
+    write_catalog(store, list(catalog.DATASETS), now=now)
+    store.commit(f"aurora {rows['time'].iloc[0]:%Y-%m-%d %H:%M}Z")
+    best = rows.sort_values("visibility_chance", ascending=False).drop_duplicates("site").head(5)
+    for r in best.itertuples():
+        log.info(
+            "%s: %.0f%% às %s (aurora %.0f%%, nuvens %s%%, Kp %.1f)",
+            r.site, 100 * r.visibility_chance, f"{r.target_time:%H}h UTC", 100 * r.aurora_chance,
+            "?" if pd.isna(r.cloud_cover) else f"{r.cloud_cover:.0f}", r.kp_expected,
+        )
+    return 0
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from futurespace import storage as storage_mod
     from futurespace.ml.serve import read_recent
@@ -307,6 +330,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("predict", help="emite as previsões com os dados mais recentes")
     p.set_defaults(func=cmd_predict)
+
+    p = sub.add_parser("aurora", help="previsão de visibilidade da aurora por cidade (0 a 24 h)")
+    p.set_defaults(func=cmd_aurora)
 
     p = sub.add_parser("export-web", help="gera os arquivos da parte interativa do site")
     p.add_argument("--bundle", default="models/bundle.joblib",

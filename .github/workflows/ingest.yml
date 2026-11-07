@@ -97,6 +97,12 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: futurespace predict
+      # Visibilidade da aurora por cidade (usa o Kp previsto acima; sem ele, o último medido).
+      - name: Prever aurora
+        if: ${{ !cancelled() && !inputs.backfill && steps.agenda.outputs.schedule != 'daily' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: futurespace aurora
       # Uma vez por dia: compara as previsões passadas com o que aconteceu.
       - name: Verificar previsões
         if: ${{ !cancelled() && !inputs.backfill && steps.agenda.outputs.schedule != 'realtime' }}
