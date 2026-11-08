@@ -1,4 +1,4 @@
-"""Monta a base da calibração da aurora a partir das imagens coletadas pelo aurora-sample.
+"""Monta a base da calibração da aurora a partir das imagens coletadas pelo sample_themis.py.
 
 1. Treina o classificador de imagens no OATH (baixado e conferido pelo SHA-256).
 2. Classifica as imagens THEMIS guardadas no Hugging Face (research/aurora/themis/*).
@@ -22,12 +22,11 @@ from pathlib import Path
 import httpx
 import numpy as np
 import pandas as pd
-from huggingface_hub import HfApi, hf_hub_download
+from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 
 from futurespace.aurora import astro
 from futurespace.aurora.visibility import mag_lat
-from futurespace.ml.features import load_dataset
-from futurespace.storage import HttpStorage, hf_resolve_url
+from futurespace.pipeline.http import get_json, make_client
 
 sys.path.insert(0, str(Path(__file__).parent))
 from classifier import Features, preprocess_raw, train
@@ -70,6 +69,15 @@ def magnetic_local_time(times, lat, lon) -> np.ndarray:
     return (12 + (magnetic_longitude(lat, lon) - sub_mlon) / 15) % 24
 
 
+def load_parquet_dataset(repo: str, dataset_id: str, work: Path) -> pd.DataFrame:
+    """Baixa todas as partições de uma vez (em paralelo, com novas tentativas) e lê com o pandas.
+
+    Ler partição por partição pela HTTP (768 arquivos no OMNI) esgotava o tempo de resposta.
+    """
+    snapshot_download(repo, repo_type="dataset", allow_patterns=[f"parquet/{dataset_id}/*"], local_dir=work / "hf")
+    return pd.read_parquet(work / "hf" / "parquet" / dataset_id)
+
+
 def download_samples(repo: str, work: Path) -> list[Path]:
     files = HfApi().list_repo_files(repo, repo_type="dataset")
     folders = sorted({f.rsplit("/", 1)[0] for f in files if f.startswith("research/aurora/themis/") and f.endswith("frames.npz")})
@@ -104,17 +112,23 @@ def context(df: pd.DataFrame, kp: pd.DataFrame, omni: pd.DataFrame) -> pd.DataFr
     return out
 
 
-def era5_clouds(site: str, start: str, end: str) -> pd.DataFrame:
+def era5_clouds(site: str, start: str, end: str, cache: Path) -> pd.DataFrame:
+    """Nuvens horárias da reanálise ERA5 (Open-Meteo), com novas tentativas e cache local."""
+    path = cache / f"era5_{site}_{start}_{end}.parquet"
+    if path.exists():
+        return pd.read_parquet(path)
     lat, lon = STATIONS[site]
-    resp = httpx.get(
-        "https://archive-api.open-meteo.com/v1/archive",
-        params={"latitude": lat, "longitude": lon, "start_date": start, "end_date": end,
-                "hourly": "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high", "timezone": "GMT"},
-        timeout=120,
-    )
-    resp.raise_for_status()
-    h = pd.DataFrame(resp.json()["hourly"])
+    with make_client() as client:
+        raw = get_json(
+            client,
+            "https://archive-api.open-meteo.com/v1/archive",
+            {"latitude": lat, "longitude": lon, "start_date": start, "end_date": end,
+             "hourly": "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high", "timezone": "GMT"},
+        )
+    h = pd.DataFrame(raw["hourly"])
     h["time"] = pd.to_datetime(h["time"], utc=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    h.to_parquet(path)
     return h
 
 
@@ -122,17 +136,17 @@ def main(repo: str, work: str, out: str) -> None:
     work_dir, out_dir = Path(work), Path(out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Classificador (imprime a validação por noite no log)
-    oath = get_oath(work_dir)
-    train(oath, work_dir / "clf")
+    # 1. Classificador (imprime a validação por noite no log); reaproveitado se já existir
     import joblib
+
+    if not (work_dir / "clf" / "aurora_classifier.joblib").exists():
+        train(get_oath(work_dir), work_dir / "clf")
 
     clf = joblib.load(work_dir / "clf" / "aurora_classifier.joblib")
     features = Features()
 
     # 2-3. Imagens coletadas → rótulos + contexto
-    store = HttpStorage(hf_resolve_url(repo))
-    kp, omni = load_dataset(store, "kp-gfz"), load_dataset(store, "omni-hourly")
+    kp, omni = load_parquet_dataset(repo, "kp-gfz", work_dir), load_parquet_dataset(repo, "omni-hourly", work_dir)
     samples, clouds = [], []
     for folder in download_samples(repo, work_dir):
         meta = pd.read_parquet(folder / "samples.parquet")
@@ -146,7 +160,7 @@ def main(repo: str, work: str, out: str) -> None:
         site, start, end = folder.name.split("_")
         cl = pd.read_parquet(folder / "clouds.parquet").assign(site=site)
         cl["hour"] = cl["time"].dt.floor("h")
-        era = era5_clouds(site, start, (pd.Timestamp(end) - pd.Timedelta(days=1)).strftime("%Y-%m-%d"))
+        era = era5_clouds(site, start, (pd.Timestamp(end) - pd.Timedelta(days=1)).strftime("%Y-%m-%d"), work_dir / "era5")
         clouds.append(cl.merge(era.rename(columns={"time": "hour"}), on="hour", how="left"))
         print(f"{folder.name}: {len(meta)} imagens, {meta['label'].value_counts().to_dict()}", flush=True)
 

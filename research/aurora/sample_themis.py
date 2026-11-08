@@ -7,7 +7,7 @@ e baixa uma imagem de cada um.
    guarda só o primeiro quadro (256x256, 16 bits) e descarta o resto.
 
 Saída na pasta indicada: frames.npz (quadros, chave = AAAAMMDD_HHMM), samples.parquet e
-clouds.parquet. Roda no GitHub Actions pelo workflow aurora-sample (plano em themis_plan.json).
+clouds.parquet. As tarefas planejadas estão em themis_plan.json.
 
 Uso: python research/aurora/sample_themis.py fsmi 2015-11-01 2016-03-01 500 <pasta_saída>
 """
