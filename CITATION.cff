@@ -7,6 +7,11 @@ authors:
     given-names: "Victor Miranda"
     affiliation: "Universidade Federal Fluminense"
     orcid: "https://orcid.org/0009-0002-4580-2122"
+doi: 10.5281/zenodo.24119038
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24119038
+    description: "DOI geral do Zenodo (todas as versões; resolve para a mais recente)"
 version: "1.0.0"
 date-released: "2026-11-10"
 license: MIT

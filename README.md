@@ -1,4 +1,4 @@
-<!-- DOI badge -->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24119038.svg)](https://doi.org/10.5281/zenodo.24119038)
 
 # Future Space: previsão experimental de tempestades geomagnéticas com IA
 
@@ -517,7 +517,7 @@ A resposta foi resumida.
 **ABNT:**
 
 > FLORIDO, V. M. **Future Space: previsão experimental de tempestades geomagnéticas com IA**.
-> Versão 1.0.0. [S. l.]: Zenodo, 2026. Software. DOI: [a preencher]. Disponível em:
+> Versão 1.0.0. [S. l.]: Zenodo, 2026. Software. DOI: 10.5281/zenodo.24119038. Disponível em:
 > https://github.com/Strutf/future-space. Acesso em: [data].
 
 **BibTeX** (gerado a partir do [`CITATION.cff`](CITATION.cff)):
@@ -530,7 +530,7 @@ A resposta foi resumida.
   month     = {11},
   version   = {1.0.0},
   publisher = {Zenodo},
-  doi       = {DOI_A_PREENCHER},
+  doi       = {10.5281/zenodo.24119038},
   url       = {https://github.com/Strutf/future-space}
 }
 ```
