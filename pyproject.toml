@@ -1,7 +1,8 @@
 [project]
 name = "futurespace"
-version = "0.1.0"
-description = "Coleta, padroniza e serve dados abertos de clima espacial de várias fontes."
+version = "1.0.0"
+description = "Previsão experimental de tempestades geomagnéticas com IA, a partir de dados abertos de clima espacial."
+authors = [{ name = "Victor Miranda Florido" }]
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
