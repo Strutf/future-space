@@ -105,7 +105,10 @@ def cmd_train(args: argparse.Namespace) -> int:
     if not args.no_cme:
         raw["cme-cactus"] = load_dataset(store, "cme-cactus")
     hourly = hourly_from_history(raw["omni-hourly"], raw["kp-gfz"])
-    trained, summary = train_all(hourly, raw.get("cme-cactus"))
+    if args.no_refit and (args.publish or args.publish_if_better):
+        _error("--no-refit gera o modelo de benchmark (treinado até 2018); ele não deve ser publicado")
+        return 1
+    trained, summary = train_all(hourly, raw.get("cme-cactus"), refit_all=not args.no_refit)
     summary["reproducibility"]["data"] = {
         "storage": os.environ.get("FS_STORAGE", "local"),
         "repository": os.environ.get("FS_HF_REPO"),
@@ -257,6 +260,20 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_benchmark(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    import joblib
+
+    from futurespace import storage as storage_mod
+    from futurespace.ml.benchmark import run
+
+    # Arquivos joblib executam código ao carregar: use só modelos treinados por você.
+    bundle = joblib.load(Path(args.bundle))
+    print(run(storage_mod.from_env(), bundle))
+    return 0
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from futurespace import storage as storage_mod
     from futurespace.ml.evaluate import markdown
@@ -327,6 +344,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("train", help="treina os modelos de previsão de Dst e Kp")
     p.add_argument("--out", default="models", help="pasta de saída dos modelos")
     p.add_argument("--no-cme", action="store_true", help="treina sem as variáveis de CME")
+    p.add_argument(
+        "--no-refit",
+        action="store_true",
+        help="não re-treina com todos os dados: o modelo fica treinado até 2018 (para o benchmark)",
+    )
     p.add_argument("--publish", action="store_true", help="publica os modelos no armazenamento")
     p.add_argument(
         "--publish-if-better",
@@ -348,6 +370,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("aurora", help="previsão de visibilidade da aurora por cidade (0 a 24 h)")
     p.set_defaults(func=cmd_aurora)
+
+    p = sub.add_parser("benchmark", help="benchmark histórico contra a previsão da NOAA (desde 2022)")
+    p.add_argument("--bundle", default="models-2018/bundle.joblib", help="modelo de `train --no-refit`")
+    p.set_defaults(func=cmd_benchmark)
 
     p = sub.add_parser("evaluate", help="métricas das previsões verificadas (tabelas Markdown)")
     p.add_argument("--start", help="início do período (data-alvo, UTC)")
