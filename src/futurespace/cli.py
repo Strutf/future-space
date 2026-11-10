@@ -257,6 +257,21 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_evaluate(args: argparse.Namespace) -> int:
+    from futurespace import storage as storage_mod
+    from futurespace.ml.evaluate import markdown
+    from futurespace.ml.features import load_dataset
+
+    # Só lê: usa o mesmo armazenamento da API (FS_DATA_URL, FS_HF_REPO ou a pasta local).
+    rows = load_dataset(storage_mod.reader_from_env(), "verification")
+    if args.start:
+        rows = rows[rows["target_time"] >= parse_time(args.start)]
+    if args.end:
+        rows = rows[rows["target_time"] <= parse_time(args.end)]
+    print(markdown(rows))
+    return 0
+
+
 def cmd_export_web(args: argparse.Namespace) -> int:
     import json
     from pathlib import Path
@@ -333,6 +348,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("aurora", help="previsão de visibilidade da aurora por cidade (0 a 24 h)")
     p.set_defaults(func=cmd_aurora)
+
+    p = sub.add_parser("evaluate", help="métricas das previsões verificadas (tabelas Markdown)")
+    p.add_argument("--start", help="início do período (data-alvo, UTC)")
+    p.add_argument("--end", help="fim do período (data-alvo, UTC)")
+    p.set_defaults(func=cmd_evaluate)
 
     p = sub.add_parser("export-web", help="gera os arquivos da parte interativa do site")
     p.add_argument("--bundle", default="models/bundle.joblib",
