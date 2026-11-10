@@ -296,8 +296,9 @@ Kp +3 h RMSE from 0.76 to 1.34. Short-range Dst depends mainly on its current va
 At 24 h, recurrence and CMEs account for 27% of the Kp value model. From the next training run
 onward, this breakdown is stored for all nine models (see "Model history").
 
-**Comparison with NOAA (2022–2026).** This was an exploratory analysis whose script is not yet in
-the repository, so these figures are not reproducible from the code. The comparison uses the NCEI archive of NOAA's 3-Day
+**Comparison with NOAA (2022–2026).** Reproducible with `futurespace backfill kp-forecast-3day
+--start 2022-03-01`, `futurespace train --no-refit --out models-2018` and `futurespace benchmark
+--bundle models-2018/bundle.joblib`. The comparison uses the NCEI archive of NOAA's 3-Day
 Forecast. Both forecasts are scored against observed Kp (GFZ), on the same blocks and with
 the same lead times. For each NOAA edition, the model:
 
@@ -306,9 +307,9 @@ the same lead times. For each NOAA edition, the model:
 
 | Lead time | Blocks | MAE model | MAE NOAA | Alert HSS model | Alert HSS NOAA |
 |---|---|---|---|---|---|
-| ~6 h | 2,534 | 0.72 | 1.16 | 0.40 | 0.24 |
-| ~12 h | 2,534 | 0.80 | 1.18 | 0.21 | 0.16 |
-| ~24 h | 2,534 | 0.90 | 1.16 | 0.08 | 0.16 |
+| ~6 h | 2,528 | 0.72 | 1.16 | 0.40 | 0.24 |
+| ~12 h | 2,528 | 0.80 | 1.18 | 0.21 | 0.16 |
+| ~24 h | 2,528 | 0.90 | 1.16 | 0.08 | 0.16 |
 
 The model has lower error at all three lead times and better alerts at 6 h and 12 h. NOAA has
 better alerts at 24 h. About 82% of NOAA's G1 alerts in this period were not confirmed.

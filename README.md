@@ -21,8 +21,9 @@ preveem os índices Kp (3 a 24 h à frente) e Dst (1 a 24 h à frente), com valo
 de tempestade e alerta.
 
 No período de teste (2019–2026), os modelos reduzem o erro (RMSE) em 13% a 25% em relação à
-persistência. As previsões ao vivo são verificadas diariamente contra o observado e contra a
-previsão oficial da NOAA SWPC.
+persistência. Num benchmark histórico contra a previsão oficial da NOAA SWPC (2022–2026, 2.528
+emissões por horizonte), o erro médio do Kp foi 0,72 contra 1,16 a 6 h. As previsões ao vivo são
+verificadas diariamente contra o observado e contra a NOAA.
 
 ## Autoria
 
@@ -259,6 +260,46 @@ alerta.
 - **Alerta:** tem habilidade até cerca de 6 h. Em 12 a 24 h, a maioria dos alertas de Kp é
   falsa.
 
+### Benchmark histórico contra a NOAA SWPC (2022–2026)
+
+**Como é feito.** O `futurespace benchmark` usa o arquivo de todas as edições do 3-Day Forecast
+da NOAA desde março de 2022 (NCEI), com emissões às 00:30 e às 12:30 UTC:
+
+- **Modelo:** para cada edição, o modelo prevê com os dados disponíveis até a hora cheia
+  anterior à emissão. É a versão treinada **só até 2018** (`futurespace train --no-refit`), que
+  nunca viu o período comparado.
+- **Comparação:** as duas previsões são confrontadas com o Kp definitivo do GFZ, nos mesmos
+  blocos de 3 h e com a mesma antecedência.
+- **Alertas:** o do modelo usa o limiar do classificador; o da NOAA conta quando o Kp previsto é
+  ≥ 5−.
+
+**Resultado:** 2.627 edições (03/2022 a 11/2026). Na comparação direta, são 2.528 emissões por
+horizonte, de 03/2022 a 10/2026, limitadas pelo fim do OMNI disponível.
+
+| Horizonte | Tempestades | MAE modelo | MAE NOAA | RMSE modelo | RMSE NOAA | POD modelo | POD NOAA | FAR modelo | FAR NOAA | HSS modelo | HSS NOAA |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| +6 h | 101 | **0,72** | 1,16 | **0,95** | 1,48 | **0,64** | 0,51 | **0,68** | 0,81 | **0,40** | 0,24 |
+| +12 h | 74 | **0,80** | 1,18 | **1,05** | 1,51 | **0,47** | 0,42 | **0,84** | 0,87 | **0,21** | 0,16 |
+| +24 h | 70 | **0,90** | 1,16 | **1,17** | 1,48 | **0,46** | 0,30 | 0,93 | **0,86** | 0,08 | **0,16** |
+
+A NOAA sozinha, nas 55.122 previsões de bloco com Kp observado:
+
+| Antecedência | n | MAE | RMSE | POD | FAR | HSS |
+|---|---|---|---|---|---|---|
+| 0–12 h | 10.508 | 1,16 | 1,49 | 0,41 | 0,82 | 0,21 |
+| 12–24 h | 10.508 | 1,17 | 1,49 | 0,29 | 0,82 | 0,18 |
+| 24–48 h | 21.006 | 1,15 | 1,47 | 0,21 | 0,84 | 0,15 |
+| 48–72 h | 13.100 | 1,13 | 1,44 | 0,11 | 0,84 | 0,10 |
+
+**Leitura:**
+
+- **Valor do Kp:** o modelo erra menos que a NOAA nos três horizontes.
+- **Alerta de tempestade:** o modelo é melhor em 6 h e 12 h; a NOAA, em 24 h. Os
+  previsores da NOAA analisam imagens do Sol e a direção das CMEs, o que pesa mais nas
+  antecedências maiores.
+- **Ressalva:** a simulação usa o OMNI e o Kp definitivo, um pouco mais limpos que os dados de
+  tempo real. A verificação diária, abaixo, testa se a vantagem se mantém na operação.
+
 ### Verificação diária contra a NOAA SWPC
 
 **Como funciona.** O `futurespace verify` roda uma vez por dia (`ingest.yml`). Ele associa cada
@@ -357,7 +398,12 @@ futurespace predict
 futurespace verify                                    # depois de algumas horas de previsões
 futurespace evaluate                                  # tabelas de métricas em Markdown
 
-# 4. API e site em http://localhost:8000 (documentação em /docs)
+# 4. Benchmark histórico contra a NOAA (2022–2026)
+futurespace backfill kp-forecast-3day --start 2022-03-01   # edições da NOAA desde 2022 (NCEI)
+futurespace train --no-refit --out models-2018             # modelo treinado só até 2018 (~10 min)
+futurespace benchmark --bundle models-2018/bundle.joblib   # tabelas em Markdown
+
+# 5. API e site em http://localhost:8000 (documentação em /docs)
 futurespace serve --reload
 
 # Testes e lint
