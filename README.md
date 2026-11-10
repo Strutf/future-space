@@ -31,7 +31,7 @@ verificadas diariamente contra o observado e contra a NOAA.
 
 - Graduação em Ciência da Computação, Universidade Federal Fluminense (UFF)
 - ORCID: [0009-0002-4580-2122](https://orcid.org/0009-0002-4580-2122)
-- [Currículo Lattes](https://wwws.cnpq.br/cvlattesweb/PKG_MENU.menu?f_cod=C91310DFF650195584382DF3E5378A44#)
+- [Currículo Lattes](https://lattes.cnpq.br/6491049181958052)
 - GitHub: [Strutf](https://github.com/Strutf)
 
 ## Motivação e contexto
