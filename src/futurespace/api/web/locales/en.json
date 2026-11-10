@@ -25,7 +25,8 @@
     "disclaimer": "Experimental forecasts, made for learning and following along. For serious decisions, check <a href=\"https://www.swpc.noaa.gov/\" rel=\"noopener\">NOAA SWPC</a>.",
     "api": "Open API",
     "data": "Data",
-    "code": "Code"
+    "code": "Code",
+    "author": "Developed by"
   },
   "home": {
     "tagline": "An artificial intelligence that keeps an eye on the Sun and tells you when a space storm is coming.",

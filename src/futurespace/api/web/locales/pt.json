@@ -25,7 +25,8 @@
     "disclaimer": "Previsões experimentais, feitas para aprender e acompanhar. Para decisões sérias, consulte a <a href=\"https://www.swpc.noaa.gov/\" rel=\"noopener\">NOAA SWPC</a>.",
     "api": "API aberta",
     "data": "Dados",
-    "code": "Código"
+    "code": "Código",
+    "author": "Desenvolvido por"
   },
   "home": {
     "tagline": "Uma inteligência artificial que fica de olho no Sol e avisa quando vem tempestade no espaço.",
