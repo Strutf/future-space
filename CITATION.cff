@@ -3,8 +3,8 @@ message: "Se você usar este software, os dados ou os resultados, cite-o como ab
 title: "Future Space: previsão experimental de tempestades geomagnéticas com IA"
 type: software
 authors:
-  - family-names: "Miranda Florido"
-    given-names: "Victor"
+  - family-names: "Florido"
+    given-names: "Victor Miranda"
     affiliation: "Universidade Federal Fluminense"
     orcid: "https://orcid.org/0009-0002-4580-2122"
 version: "1.0.0"

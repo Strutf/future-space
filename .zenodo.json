@@ -5,7 +5,7 @@
   "description": "<p>O Future Space coleta de hora em hora dados públicos de clima espacial de vários provedores (NOAA SWPC, NASA OMNI, GFZ Potsdam, WDC Kyoto, SIDC/CACTus e o arquivo de previsões da NCEI) e os padroniza num conjunto de dados aberto, servido por uma API pública.</p><p>Com esse conjunto, modelos de gradient boosting (scikit-learn) preveem os índices geomagnéticos Kp (de 3 a 24 h à frente) e Dst (de 1 a 24 h à frente), cada um com valor, probabilidade de tempestade e alerta. Os modelos usam apenas variáveis também disponíveis em tempo real, são avaliados com divisão temporal (teste de 2019 em diante) contra a persistência, e as previsões ao vivo são verificadas diariamente contra o observado e contra a previsão oficial da NOAA SWPC.</p><p>As previsões são experimentais e não devem ser usadas para decisões operacionais.</p>",
   "creators": [
     {
-      "name": "Miranda Florido, Victor",
+      "name": "Florido, Victor Miranda",
       "affiliation": "Universidade Federal Fluminense",
       "orcid": "0009-0002-4580-2122"
     }
