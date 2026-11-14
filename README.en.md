@@ -384,6 +384,11 @@ implemented in `aurora/astro.py`. Against astropy, over 300 random times and pla
 - 0.3° for the Moon's altitude;
 - 0.002 for the Moon's illuminated fraction.
 
+**Failure handling.** `aurora-ovation` and `aurora-weather` are marked as non-critical
+(`critical=False` in the catalog). If they fail, the hourly collection logs a warning instead of
+failing, and the forecast uses the cloud forecast from the previous collection, which already
+covers the next 25 hours.
+
 **Limitations.** The v0 weights are not calibrated against observations. The Kp rule has no
 magnetic-local-time dependence and no poleward boundary for the auroral oval.
 

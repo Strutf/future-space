@@ -509,7 +509,9 @@ A resposta foi resumida.
   - o Dst de tempo real é provisório.
 - **Verificação ao vivo:** ainda é curta (desde 06/11/2026), com poucas tempestades.
 - **Visibilidade da aurora:** existe uma previsão por cidade (`aurora-visibility`), que é
-  experimental e ainda não foi calibrada no backend. A pesquisa de calibração com câmeras
+  experimental e ainda não foi calibrada no backend. As fontes dela (`aurora-ovation` e
+  `aurora-weather`) são marcadas como não críticas: se falharem, a coleta segue e registra só um
+  aviso, e a previsão usa as nuvens da coleta anterior, que já cobrem as 25 horas seguintes. A pesquisa de calibração com câmeras
   all-sky está em [`research/aurora/`](research/aurora/).
 
 ## Como citar

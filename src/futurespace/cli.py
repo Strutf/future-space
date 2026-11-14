@@ -21,6 +21,13 @@ def _error(message: str) -> None:
         print(f"::error::{message}", flush=True)
 
 
+def _warning(message: str) -> None:
+    """Como _error, mas como aviso: aparece na execução sem marcá-la como falha."""
+    log.warning(message)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::warning::{message}", flush=True)
+
+
 def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime) -> int:
     from futurespace import storage as storage_mod
     from futurespace.pipeline.connectors import CONNECTORS
@@ -42,8 +49,9 @@ def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime)
                 df = CONNECTORS[ds.id](client, ds_start, end)
                 result = write_dataset(store, ds, df, now=end)
             except Exception as exc:  # noqa: BLE001 - uma fonte fora do ar não deve parar as outras
-                _error(f"{ds.id}: falhou: {exc}")
-                failures.append(ds.id)
+                # Fontes experimentais (ex.: nuvens da aurora) só geram aviso: não derrubam a coleta.
+                (_error if ds.critical else _warning)(f"{ds.id}: falhou: {exc}")
+                failures.append(ds)
                 continue
             log.info("%s: %d linhas em %s", ds.id, result.rows, ", ".join(result.partitions) or "-")
             if result.rows:
@@ -56,8 +64,12 @@ def _run(datasets: list[catalog.Dataset], start: datetime | None, end: datetime)
         except Exception as exc:  # noqa: BLE001 - registra o motivo antes de falhar
             _error(f"falha ao gravar no armazenamento ({type(exc).__name__}): {exc}")
             return 1
-    if failures:
-        _error(f"datasets com falha: {', '.join(failures)}")
+    optional = [ds.id for ds in failures if not ds.critical]
+    if optional:
+        _warning(f"fontes experimentais com falha (a coleta segue): {', '.join(optional)}")
+    critical = [ds.id for ds in failures if ds.critical]
+    if critical:
+        _error(f"datasets com falha: {', '.join(critical)}")
         return 1
     return 0
 

@@ -54,6 +54,8 @@ class Dataset:
     json_partitions: bool = True
     # False quando nem o latest.json cabe: regravá-lo a cada hora incharia o histórico do repositório.
     latest_json: bool = True
+    # False para fontes de componentes experimentais: se falharem, a coleta segue sem marcar erro.
+    critical: bool = True
     notes: str = ""
 
     @property
@@ -507,6 +509,7 @@ DATASETS: tuple[Dataset, ...] = (
         latest_mode="snapshot",
         json_partitions=False,
         latest_json=False,
+        critical=False,
         notes="A NOAA não mantém arquivo público deste produto; o histórico existe a partir do "
         "início da coleta. Por ser grande (~20 mil pontos por mapa), fica só em Parquet.",
     ),
@@ -538,6 +541,7 @@ DATASETS: tuple[Dataset, ...] = (
         max_query_days=7,
         default_days=2,
         latest_group=("site",),
+        critical=False,
     ),
     Dataset(
         id="aurora-visibility",
